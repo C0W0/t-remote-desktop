@@ -8,3 +8,7 @@ target_sources(host
 target_link_libraries(host PRIVATE
     network
 )
+
+if(WIN32)
+    target_link_libraries(host PRIVATE ws2_32)
+endif()
