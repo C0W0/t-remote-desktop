@@ -2,3 +2,4 @@
 .idea
 # Build folder
 out
+build/**
