@@ -56,7 +56,9 @@ int main() {
     }
 
     // Accept a client socket
-    SOCKET clientSocket = accept(listenSocket, nullptr, nullptr);
+    sockaddr_in clientAddr{};
+    int addrLen = sizeof(clientAddr);
+    SOCKET clientSocket = accept(listenSocket, static_cast<sockaddr*>(static_cast<void*>(&clientAddr)), &addrLen);
     if (clientSocket == INVALID_SOCKET) {
         std::printf("accept failed: %d\n", WSAGetLastError());
         closesocket(listenSocket);
@@ -65,6 +67,13 @@ int main() {
     }
 
     closesocket(listenSocket);
+
+    std::string addrStr{INET_ADDRSTRLEN};
+    addrStr.resize(INET_ADDRSTRLEN);
+    inet_ntop(AF_INET, &clientAddr.sin_addr, addrStr.data(), INET_ADDRSTRLEN);
+    addrStr.resize(std::strlen(addrStr.data()));
+    unsigned short clientPort = ntohs(clientAddr.sin_port);
+    std::println(std::cout, "Accepting connection from {}:{}", addrStr, clientPort);
 
     char recvbuf[DEFAULT_BUFLEN];
     // Receive until the peer shuts down the connection
