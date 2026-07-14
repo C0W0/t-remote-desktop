@@ -3,6 +3,10 @@
 //
 
 #include "tcp/Server.h"
+
+#include <iostream>
+#include <print>
+
 #include "tcp/Socket.h"
 
 #include <string>
@@ -11,12 +15,13 @@ using namespace network;
 
 std::expected<TcpServer, int> TcpServer::CreateServer(const uint16_t port) {
     std::expected<ListeningSocket, int> result = ListeningSocket::Listen(port);
-    return std::move(result).transform(
-        [](ListeningSocket&& socket) { return TcpServer(std::move(socket)); }
-    );
+    return std::move(result).transform([port](ListeningSocket&& socket) {
+        std::println(std::cout, "Listening on localhost:{}", port);
+        return TcpServer(std::move(socket));
+    });
 }
 
-std::expected<void, int> TcpServer::accept() {
+std::expected<AddrInfo, int> TcpServer::accept() {
     AddrInfo addrInfo;
     std::expected<ConnectionSocket, int> result = ConnectionSocket::Accept(serverSocket_, &addrInfo);
     if (!result.has_value()) {
@@ -31,9 +36,8 @@ std::expected<void, int> TcpServer::accept() {
     else {
         ConnectionSocket& connectionSocket = result.value();
         connectionSocket.send("Connection busy");
-        connectionSocket.close();
     }
-    return {};
+    return addrInfo;
 }
 
 std::expected<int, int> TcpServer::recv(std::span<char> buffer) {

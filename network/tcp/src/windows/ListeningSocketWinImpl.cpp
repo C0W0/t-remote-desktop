@@ -62,6 +62,7 @@ std::expected<std::unique_ptr<ListeningSocket::Impl>, int> ListeningSocket::Impl
 }
 
 ListeningSocket::Impl::~Impl() {
+    std::println(std::cout, "Listening socket closed");
     closesocket(socket_);
 }
 

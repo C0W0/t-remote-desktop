@@ -55,7 +55,7 @@ std::expected<int, int> ConnectionSocket::Impl::recv(std::span<char> buffer) {
     if (bytesRecv < 0) {
         const int err = WSAGetLastError();
         std::println(std::cout, "recv failed: {}", err);
-        closesocket(socket_);
+        close();
         return std::unexpected(err);
     }
 
@@ -67,7 +67,7 @@ std::expected<void, int> ConnectionSocket::Impl::send(std::string_view buffer) {
     if (iSendResult == SOCKET_ERROR) {
         const int err = WSAGetLastError();
         std::println(std::cout, "send failed: {}", err);
-        closesocket(socket_);
+        close();
         return std::unexpected(err);
     }
     std::println(std::cout, "Bytes sent: {}", iSendResult);
@@ -75,6 +75,7 @@ std::expected<void, int> ConnectionSocket::Impl::send(std::string_view buffer) {
 }
 
 void ConnectionSocket::Impl::close() {
+    std::println(std::cout, "Connection socket closed");
     const int iResult = shutdown(socket_, SD_SEND);
     if (iResult == SOCKET_ERROR) {
         std::println(std::cout, "shutdown failed: {}", WSAGetLastError());
@@ -84,7 +85,8 @@ void ConnectionSocket::Impl::close() {
 }
 
 ConnectionSocket::Impl::~Impl() {
+    std::println(std::cout, "Connection socket dropped");
     if (!closed_) {
-        closesocket(socket_);
+        close();
     }
 }
