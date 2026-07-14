@@ -14,13 +14,11 @@ class ListeningSocket::Impl {
 public:
     static std::expected<std::unique_ptr<Impl>, int> Listen(uint16_t port);
 
-    // DO NOT USE THE CONSTRUCTOR. Call `Listen` to create a socket instead.
-    explicit Impl() = default;
-
     SOCKET getSocket() const { return socket_; }
 
     ~Impl();
 private:
+    explicit Impl() = default;
     SOCKET socket_ = INVALID_SOCKET;
 };
 }

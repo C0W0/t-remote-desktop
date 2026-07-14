@@ -38,7 +38,7 @@ ConnectionSocket::Impl::Accept(const ListeningSocket& listeningSocket, AddrInfo*
         outAddrInfo->port = ntohs(clientAddr.sin_port);
     }
 
-    auto socketImpl = std::make_unique<ConnectionSocket::Impl>();
+    std::unique_ptr<ConnectionSocket::Impl> socketImpl{new ConnectionSocket::Impl{}};
     socketImpl->socket_ = clientSocket;
     return std::move(socketImpl);
 }
@@ -63,6 +63,20 @@ std::expected<int, int> ConnectionSocket::Impl::recv(std::span<char> buffer) {
 }
 
 std::expected<void, int> ConnectionSocket::Impl::send(std::string_view buffer) {
+    int bytesSent = 0;
+    do {
+        auto result = sendImpl(buffer);
+        if (!result) {
+            return std::unexpected(result.error());
+        }
+        bytesSent = result.value();
+        buffer = buffer.substr(bytesSent);
+    } while (!buffer.empty() && bytesSent != 0);
+
+    return {};
+}
+
+std::expected<int, int> ConnectionSocket::Impl::sendImpl(std::string_view buffer) {
     const int iSendResult = ::send(socket_, buffer.data(), buffer.size(), 0);
     if (iSendResult == SOCKET_ERROR) {
         const int err = WSAGetLastError();
@@ -71,7 +85,7 @@ std::expected<void, int> ConnectionSocket::Impl::send(std::string_view buffer) {
         return std::unexpected(err);
     }
     std::println(std::cout, "Bytes sent: {}", iSendResult);
-    return {};
+    return iSendResult;
 }
 
 void ConnectionSocket::Impl::close() {

@@ -56,7 +56,7 @@ std::expected<std::unique_ptr<ListeningSocket::Impl>, int> ListeningSocket::Impl
         return std::unexpected(err);
     }
 
-    auto socketImpl = std::make_unique<ListeningSocket::Impl>();
+    std::unique_ptr<ListeningSocket::Impl> socketImpl{new ListeningSocket::Impl{}};
     socketImpl->socket_ = listenSocket;
     return std::move(socketImpl);
 }

@@ -16,8 +16,6 @@ class ConnectionSocket::Impl {
 public:
     static std::expected<std::unique_ptr<Impl>, int> Accept(const ListeningSocket& listeningSocket, AddrInfo* outAddrInfo);
 
-    // DO NOT USE THE CONSTRUCTOR. Call `Listen` to create a socket instead.
-    explicit Impl() = default;
     ~Impl();
 
     std::expected<int, int> recv(std::span<char> buffer);
@@ -26,6 +24,9 @@ public:
     void close();
 
 private:
+    explicit Impl() = default;
+    std::expected<int, int> sendImpl(std::string_view buffer);
+
     SOCKET socket_ = INVALID_SOCKET;
     bool closed_ = false;
 };
