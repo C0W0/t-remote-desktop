@@ -16,6 +16,10 @@ public:
 
     // DO NOT USE THE CONSTRUCTOR. Call `Listen` to create a socket instead.
     explicit Impl() = default;
+
+    SOCKET getSocket() const { return socket_; }
+
+    ~Impl();
 private:
     SOCKET socket_ = INVALID_SOCKET;
 };

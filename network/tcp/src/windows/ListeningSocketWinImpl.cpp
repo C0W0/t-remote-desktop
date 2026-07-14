@@ -61,4 +61,8 @@ std::expected<std::unique_ptr<ListeningSocket::Impl>, int> ListeningSocket::Impl
     return std::move(socketImpl);
 }
 
+ListeningSocket::Impl::~Impl() {
+    closesocket(socket_);
+}
+
 
