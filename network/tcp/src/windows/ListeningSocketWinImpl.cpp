@@ -51,7 +51,7 @@ std::expected<std::unique_ptr<ListeningSocket::Impl>, int> ListeningSocket::Impl
 
     if (listen(listenSocket, SOMAXCONN) == SOCKET_ERROR) {
         const int err = WSAGetLastError();
-        std::printf("Listen failed with error: %d\n", WSAGetLastError());
+        std::println(std::cout,"Listen failed with error: {}\n", err);
         closesocket(listenSocket);
         return std::unexpected(err);
     }
