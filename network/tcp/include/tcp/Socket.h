@@ -27,7 +27,7 @@ public:
     static ArcConnectionSocket toArcConnectionSocket(ConnectionSocket&& socket);
     // outAddrInfo is optional
     static std::expected<ConnectionSocket, int> Accept(const ListeningSocket& listeningSocket, AddrInfo* outAddrInfo);
-    // TODO: Connect
+    static std::expected<ConnectionSocket, int> Connect(const char* address, uint16_t port);
 
     ConnectionSocket(ConnectionSocket&& other) noexcept;
     ConnectionSocket& operator=(ConnectionSocket&& other) noexcept;

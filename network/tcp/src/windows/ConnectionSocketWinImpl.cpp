@@ -2,13 +2,12 @@
 // Created by Terry on 2026-07-10.
 //
 
-#include "tcp/Socket.h"
-#include "WindowsContext.h"
-#include "ConnectionSocketWinImpl.h"
-
 #include <iostream>
 #include <ostream>
 
+#include "tcp/Socket.h"
+#include "WindowsContext.h"
+#include "ConnectionSocketWinImpl.h"
 #include "ListeningSocketWinImpl.h"
 
 using namespace network;
@@ -40,6 +39,51 @@ ConnectionSocket::Impl::Accept(const ListeningSocket& listeningSocket, AddrInfo*
 
     std::unique_ptr<ConnectionSocket::Impl> socketImpl{new ConnectionSocket::Impl{}};
     socketImpl->socket_ = clientSocket;
+    return std::move(socketImpl);
+}
+
+std::expected<std::unique_ptr<ConnectionSocket::Impl>, int>
+ConnectionSocket::Impl::Connect(const char* address, const uint16_t port) {
+    WinsockInitializer::Initialize();
+
+    addrinfo hints{};
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+    hints.ai_flags = AI_PASSIVE;
+    addrinfo* result = nullptr;
+
+    // Resolve the local address and port to be used by the server
+    int iResult = getaddrinfo(address, std::to_string(port).c_str(), &hints, &result);
+    if (iResult != 0) {
+        std::println(std::cout, "getaddrinfo failed: {}", iResult);
+        return std::unexpected(iResult);
+    }
+
+    SOCKET connectSocket{};
+    addrinfo* originalResultPtr = result;
+    for(; result != nullptr; result = result->ai_next) {
+        // Create a SOCKET for connecting to server
+        connectSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+        if (connectSocket == INVALID_SOCKET) {
+            const int err = WSAGetLastError();
+            std::println(std::cout, "socket failed with error: {}", err);
+            freeaddrinfo(originalResultPtr);
+            return std::unexpected(err);
+        }
+
+        // Connect to server.
+        iResult = connect(connectSocket, result->ai_addr, static_cast<int>(result->ai_addrlen));
+        if (iResult != SOCKET_ERROR) {
+            break;
+        }
+        closesocket(connectSocket);
+    }
+
+    freeaddrinfo(originalResultPtr);
+
+    std::unique_ptr<ConnectionSocket::Impl> socketImpl{new ConnectionSocket::Impl{}};
+    socketImpl->socket_ = connectSocket;
     return std::move(socketImpl);
 }
 

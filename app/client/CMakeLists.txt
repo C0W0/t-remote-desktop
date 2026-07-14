@@ -5,11 +5,6 @@ target_sources(client
         main.cpp
 )
 
-#target_link_libraries(client PRIVATE
-#    network
-#)
-
-
-if (WIN32)
-    target_link_libraries(client PRIVATE ws2_32)
-endif ()
+target_link_libraries(client PRIVATE
+    network
+)

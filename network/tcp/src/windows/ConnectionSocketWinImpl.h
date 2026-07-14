@@ -15,6 +15,7 @@ namespace network {
 class ConnectionSocket::Impl {
 public:
     static std::expected<std::unique_ptr<Impl>, int> Accept(const ListeningSocket& listeningSocket, AddrInfo* outAddrInfo);
+    static std::expected<std::unique_ptr<Impl>, int> Connect(const char* address, uint16_t port);
 
     ~Impl();
 

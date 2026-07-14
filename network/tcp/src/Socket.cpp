@@ -45,6 +45,15 @@ std::expected<ConnectionSocket, int> ConnectionSocket::Accept(const ListeningSoc
     });
 }
 
+std::expected<ConnectionSocket, int> ConnectionSocket::Connect(const char* address, uint16_t port) {
+    auto result = ConnectionSocket::Impl::Connect(address, port);
+    return std::move(result).transform([](std::unique_ptr<ConnectionSocket::Impl>&& impl) {
+        ConnectionSocket socket;
+        socket.pImpl_ = std::move(impl);
+        return socket;
+    });
+}
+
 std::expected<int, int> ConnectionSocket::recv(std::span<char> buffer) {
     return pImpl_->recv(buffer);
 }
