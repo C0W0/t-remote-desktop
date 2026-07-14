@@ -6,23 +6,33 @@
 
 #include <cstdint>
 #include <expected>
-#include "ServerSocket.h"
+#include <vector>
+
+#include "Socket.h"
 
 namespace network {
     class TcpServer {
     public:
-        static std::expected<TcpServer, int> CreateListeningSocket(uint16_t port);
-
-        TcpServer(TcpServer&& server) = default;
-        TcpServer& operator=(TcpServer&& server) = default;
+        static std::expected<TcpServer, int> CreateServer(uint16_t port);
         ~TcpServer() = default;
+
+        TcpServer(TcpServer&& other) noexcept : serverSocket_(std::move(other.serverSocket_)) {
+            connection_ = other.connection_.exchange(nullptr);
+        }
+
+        TcpServer& operator=(TcpServer&& other) noexcept {
+            serverSocket_ = std::move(other.serverSocket_);
+            connection_ = other.connection_.exchange(nullptr);
+            return *this;
+        }
 
         TcpServer(const TcpServer&) = delete;
         TcpServer& operator=(const TcpServer&) = delete;
     private:
-        explicit TcpServer(ServerSocket&& socket) : serverSocket_{std::move(socket)} {}
+        explicit TcpServer(ListeningSocket&& socket) : serverSocket_{std::move(socket)} {}
     private:
-        ServerSocket serverSocket_;
+        ListeningSocket serverSocket_;
+        std::atomic<std::shared_ptr<ConnectionSocket>> connection_;
     };
 };
 
