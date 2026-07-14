@@ -28,6 +28,12 @@ namespace network {
 
         TcpServer(const TcpServer&) = delete;
         TcpServer& operator=(const TcpServer&) = delete;
+
+        std::expected<void, int> accept();
+        // TODO: register control callbacks instead of doing these unsafe calls
+        std::expected<int, int> recv(std::span<char> buffer);
+        // TODO: register control callbacks instead of doing these unsafe calls
+        std::expected<void, int> send(std::string_view buffer);
     private:
         explicit TcpServer(ListeningSocket&& socket) : serverSocket_{std::move(socket)} {}
     private:
