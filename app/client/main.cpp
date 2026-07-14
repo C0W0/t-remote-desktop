@@ -85,15 +85,6 @@ int main() {
             printf("recv failed: %d\n", WSAGetLastError());
     } while (iResult > 0);
 
-    // shutdown the send half of the connection since no more data will be sent
-    iResult = shutdown(connectSocket, SD_SEND);
-    if (iResult == SOCKET_ERROR) {
-        printf("shutdown failed: %d\n", WSAGetLastError());
-        closesocket(connectSocket);
-        WSACleanup();
-        return 1;
-    }
-
     // cleanup
     closesocket(connectSocket);
     WSACleanup();
