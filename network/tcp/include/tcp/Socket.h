@@ -56,6 +56,8 @@ public:
     ListeningSocket& operator=(const ListeningSocket& other) = delete;
     ~ListeningSocket();
 
+    void close();
+
     friend class ConnectionSocket::Impl;
 private:
     ListeningSocket();

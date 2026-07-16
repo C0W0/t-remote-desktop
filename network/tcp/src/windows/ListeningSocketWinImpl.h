@@ -14,7 +14,8 @@ class ListeningSocket::Impl {
 public:
     static std::expected<std::unique_ptr<Impl>, int> Listen(uint16_t port);
 
-    SOCKET getSocket() const { return socket_; }
+    [[nodiscard]] SOCKET getSocket() const { return socket_; }
+    void abort();
 
     ~Impl();
 private:

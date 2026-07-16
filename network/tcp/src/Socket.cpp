@@ -26,6 +26,10 @@ ListeningSocket::ListeningSocket(ListeningSocket&& other) noexcept = default;
 ListeningSocket& ListeningSocket::operator=(ListeningSocket&& other) noexcept = default;
 ListeningSocket::~ListeningSocket() = default;
 
+void ListeningSocket::close() {
+    pImpl_->abort();
+}
+
 
 ConnectionSocket::ConnectionSocket() = default;
 ConnectionSocket::ConnectionSocket(ConnectionSocket&& other) noexcept = default;

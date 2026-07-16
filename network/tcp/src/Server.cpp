@@ -28,16 +28,14 @@ std::expected<AddrInfo, int> TcpServer::accept() {
         return std::unexpected(result.error());
     }
 
-    if (!connection_.load()) {
-        ArcConnectionSocket connectionSocket = ConnectionSocket::toArcConnectionSocket(std::move(result.value()));
-        connection_.store(std::move(connectionSocket));
-        // TODO: Spawn thread to handle traffic
-    }
-    else {
-        ConnectionSocket& connectionSocket = result.value();
-        connectionSocket.send("Connection busy");
+    if (onAccept_) {
+        onAccept_(addrInfo, std::move(result).value(), connection_);
     }
     return addrInfo;
+}
+
+void TcpServer::onAccept(ConnectionHandler&& onAccept) {
+    onAccept_ = std::move(onAccept);
 }
 
 std::expected<int, int> TcpServer::recv(std::span<char> buffer) {

@@ -139,6 +139,7 @@ void ConnectionSocket::Impl::close() {
         std::println(std::cout, "shutdown failed: {}", WSAGetLastError());
     }
     closesocket(socket_);
+    socket_ = INVALID_SOCKET;
     closed_ = true;
 }
 
