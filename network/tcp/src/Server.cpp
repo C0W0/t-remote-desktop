@@ -29,27 +29,11 @@ std::expected<AddrInfo, int> TcpServer::accept() {
     }
 
     if (onAccept_) {
-        onAccept_(addrInfo, std::move(result).value(), connection_);
+        onAccept_(addrInfo, std::move(result).value(), *this);
     }
     return addrInfo;
 }
 
 void TcpServer::onAccept(ConnectionHandler&& onAccept) {
     onAccept_ = std::move(onAccept);
-}
-
-std::expected<int, int> TcpServer::recv(std::span<char> buffer) {
-    const std::shared_ptr<ConnectionSocket> ptr = connection_.load();
-    if (!ptr) {
-        return std::unexpected(0);
-    }
-    return ptr->recv(buffer);
-}
-
-std::expected<void, int> TcpServer::send(std::string_view buffer) {
-    const std::shared_ptr<ConnectionSocket> ptr = connection_.load();
-    if (!ptr) {
-        return std::unexpected(0);
-    }
-    return ptr->send(buffer);
 }

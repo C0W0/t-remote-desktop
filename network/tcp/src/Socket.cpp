@@ -58,12 +58,32 @@ std::expected<ConnectionSocket, int> ConnectionSocket::Connect(const char* addre
     });
 }
 
-std::expected<int, int> ConnectionSocket::recv(std::span<char> buffer) {
+std::expected<int, int> ConnectionSocket::recv(std::span<char> buffer) const {
     return pImpl_->recv(buffer);
 }
 
-std::expected<void, int> ConnectionSocket::send(std::string_view buffer) {
-    return pImpl_->send(buffer);
+std::expected<void, int> ConnectionSocket::recv(std::span<char> buffer, int exactSize) const {
+    int bytesReceived = 0;
+    while (bytesReceived < exactSize) {
+        auto result = pImpl_->recv(buffer.subspan(bytesReceived));
+        if (!result) {
+            return std::unexpected(result.error());
+        }
+        bytesReceived += result.value();
+    }
+    return {};
+}
+
+std::expected<void, int> ConnectionSocket::send(std::string_view buffer) const {
+    int bytesSent = 0;
+    while (bytesSent < buffer.size()) {
+        auto result = pImpl_->send(buffer);
+        if (!result) {
+            return std::unexpected(result.error());
+        }
+        bytesSent += result.value();
+    }
+    return {};
 }
 
 void ConnectionSocket::close() {

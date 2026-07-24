@@ -20,13 +20,12 @@ public:
     ~Impl();
 
     std::expected<int, int> recv(std::span<char> buffer);
-    std::expected<void, int> send(std::string_view buffer);
+    std::expected<int, int> send(std::string_view buffer);
 
     void close();
 
 private:
     explicit Impl() = default;
-    std::expected<int, int> sendImpl(std::string_view buffer);
 
     SOCKET socket_ = INVALID_SOCKET;
     bool closed_ = false;
