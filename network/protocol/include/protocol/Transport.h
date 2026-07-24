@@ -11,6 +11,8 @@
 #include <span>
 #include <vector>
 
+namespace network {
+
 enum class MessageType : std::uint16_t {
     Auth,
     ServerResp,
@@ -73,5 +75,7 @@ constexpr auto networkToHost(T value)
 }
 
 std::array<char, sizeof(TransportHeader)> serializeDisconnect();
+
+}
 
 #endif //TRDP_TRANSPORT_H

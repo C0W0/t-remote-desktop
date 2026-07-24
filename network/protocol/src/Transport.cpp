@@ -4,6 +4,7 @@
 
 #include "protocol/Transport.h"
 
+namespace network {
 std::array<char, sizeof(TransportHeader)> serializeHeaderA(const TransportHeader& header) {
     std::array<char, sizeof(TransportHeader)> result{};
 
@@ -43,4 +44,5 @@ TransportHeader deserializeHeader(const std::span<const char> bytesData) {
 std::array<char, sizeof(TransportHeader)> serializeDisconnect() {
     constexpr TransportHeader header {.type = MessageType::Disconnect, .flags = 0, .length = 0};
     return serializeHeaderA(header);
+}
 }
