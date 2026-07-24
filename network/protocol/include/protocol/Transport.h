@@ -20,6 +20,20 @@ enum class MessageType : std::uint16_t {
     Disconnect
 };
 
+constexpr const char* toString(MessageType type) {
+    switch (type) {
+        case MessageType::Auth:
+            return "Auth";
+        case MessageType::ServerResp:
+            return "ServerResp";
+        case MessageType::Message:
+            return "Message";
+        case MessageType::Disconnect:
+            return "Disconnect";
+    }
+    std::unreachable();
+}
+
 struct TransportHeader {
     MessageType type;
     uint16_t flags;
@@ -39,6 +53,24 @@ enum class ResponseStatus : std::uint16_t {
     ServerBusy,
     Error
 };
+
+constexpr const char* toString(ResponseStatus status) {
+    switch (status) {
+        case ResponseStatus::Ok:
+            return "Ok";
+        case ResponseStatus::InvalidPassword:
+            return "InvalidPassword";
+        case ResponseStatus::AccessDenied:
+            return "AccessDenied";
+        case ResponseStatus::UnsupportedVersion:
+            return "UnsupportedVersion";
+        case ResponseStatus::ServerBusy:
+            return "ServerBusy";
+        case ResponseStatus::Error:
+            return "Error";
+    }
+    std::unreachable();
+}
 
 struct ServerRespMeta {
     ResponseStatus status;
