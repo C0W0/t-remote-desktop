@@ -1,4 +1,4 @@
-#include <iostream>
+#include <print>
 #include <string>
 #include <thread>
 
@@ -11,7 +11,7 @@
 int main() {
     auto result = network::TcpServer::CreateServer(27015);
     if (!result.has_value()) {
-        std::println(std::cout, "failed to create server");
+        std::println("failed to create server");
         return 1;
     }
     network::TcpServer& server = result.value();
@@ -21,7 +21,7 @@ int main() {
     network::ArcConnectionSocket arcConnectionSocket;
     server.onAccept([&thread, &closed, &arcConnectionSocket](network::AddrInfo addrInfo, network::ConnectionSocket connectionSocket, network::TcpServer& server) {
         closed = false;
-        std::println(std::cout, "accepted new connection from {}:{}", addrInfo.address, addrInfo.port);
+        std::println("accepted new connection from {}:{}", addrInfo.address, addrInfo.port);
 
         if (!arcConnectionSocket.load()) {
             arcConnectionSocket.store(std::make_shared<network::ConnectionSocket>(std::move(connectionSocket)));
@@ -33,24 +33,24 @@ int main() {
                     auto recvResult = connection->recv({buffer.data(), buffer.size()}, sizeof(network::TransportHeader));
                     if (!recvResult.has_value()) {
                         if (recvResult.error() == 0) {
-                            std::println(std::cout, "client closed the connection");
+                            std::println("client closed the connection");
                         }
                         else {
-                            std::println(std::cout, "failed to recv");
+                            std::println("failed to recv");
                         }
                         break;
                     }
 
                     auto deserialized = network::deserializeHeader({buffer.data(), buffer.size()});
                     if (!deserialized) {
-                        std::println(std::cout, "failed to deserialize Header: {}", deserialized.error());
+                        std::println("failed to deserialize Header: {}", deserialized.error());
                         break;
                     }
 
                     network::TransportHeader header = std::move(deserialized).value();
                     switch (header.type) {
                         case network::MessageType::Auth: {
-                            std::println(std::cout, "authentication");
+                            std::println("authentication");
                             // TODO: authentication
                             std::string respMsg = "Authentication successful";
                             network::ServerRespMeta respMeta {
@@ -70,38 +70,38 @@ int main() {
 
                             auto sendResult = connection->send({respSerialized.data(), respSerialized.size()});
                             if (!sendResult.has_value()) {
-                                std::println(std::cout, "failed to send");
+                                std::println("failed to send");
                                 exit = true;
                             }
                             break;
                         }
                         case network::MessageType::Message: {
-                            std::println(std::cout, "message");
+                            std::println("message");
                             buffer.clear();
                             buffer.resize(header.length);
 
                             recvResult = connection->recv({buffer.data(), buffer.size()}, header.length);
                             if (!recvResult.has_value()) {
                                 if (recvResult.error() == 0) {
-                                    std::println(std::cout, "client closed the connection");
+                                    std::println("client closed the connection");
                                 }
                                 else {
-                                    std::println(std::cout, "failed to recv");
+                                    std::println("failed to recv");
                                 }
                                 exit = true;
                                 break;
                             }
 
-                            std::println(std::cout, "content: {}", buffer);
+                            std::println("content: {}", buffer);
                             break;
                         }
                         case network::MessageType::Disconnect: {
-                            std::println(std::cout, "disconnect");
+                            std::println("disconnect");
                             exit = true;
                             break;
                         }
                         case network::MessageType::ServerResp: {
-                            std::println(std::cout, "server response - should not be received by the server.");
+                            std::println("server response - should not be received by the server.");
                             break;
                         }
                     }
@@ -137,10 +137,10 @@ int main() {
         auto acceptResult = server.accept();
         if (!acceptResult.has_value()) {
             if (acceptResult.error() == 10004) {
-                std::println(std::cout, "server closed");
+                std::println("server closed");
                 break;
             }
-            std::println(std::cout, "failed to accept new connection");
+            std::println("failed to accept new connection");
             return 1;
         }
     }

@@ -2,8 +2,7 @@
 // Created by Terry on 2026-07-10.
 //
 
-#include <iostream>
-#include <ostream>
+#include <print>
 
 #include "tcp/Socket.h"
 #include "WindowsContext.h"
@@ -26,7 +25,7 @@ ConnectionSocket::Impl::Accept(const ListeningSocket& listeningSocket, AddrInfo*
 
     if (clientSocket == INVALID_SOCKET) {
         const int err = WSAGetLastError();
-        std::println(std::cout, "accept failed: {}", err);
+        std::println("accept failed: {}", err);
         return std::unexpected(err);
     }
 
@@ -56,7 +55,7 @@ ConnectionSocket::Impl::Connect(const char* address, const uint16_t port) {
     // Resolve the local address and port to be used by the server
     int iResult = getaddrinfo(address, std::to_string(port).c_str(), &hints, &result);
     if (iResult != 0) {
-        std::println(std::cout, "getaddrinfo failed: {}", iResult);
+        std::println("getaddrinfo failed: {}", iResult);
         return std::unexpected(iResult);
     }
 
@@ -67,7 +66,7 @@ ConnectionSocket::Impl::Connect(const char* address, const uint16_t port) {
         connectSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
         if (connectSocket == INVALID_SOCKET) {
             const int err = WSAGetLastError();
-            std::println(std::cout, "socket failed with error: {}", err);
+            std::println("socket failed with error: {}", err);
             freeaddrinfo(originalResultPtr);
             return std::unexpected(err);
         }
@@ -92,13 +91,13 @@ std::expected<int, int> ConnectionSocket::Impl::recv(std::span<char> buffer) {
 
     // connection closed
     if (bytesRecv == 0) {
-        std::println(std::cout, "connection closed");
+        std::println("connection closed");
         return std::unexpected(0);
     }
     // error
     if (bytesRecv < 0) {
         const int err = WSAGetLastError();
-        std::println(std::cout, "recv failed: {}", err);
+        std::println("recv failed: {}", err);
         close();
         return std::unexpected(err);
     }
@@ -110,19 +109,19 @@ std::expected<int, int> ConnectionSocket::Impl::send(std::string_view buffer) {
     const int iSendResult = ::send(socket_, buffer.data(), buffer.size(), 0);
     if (iSendResult == SOCKET_ERROR) {
         const int err = WSAGetLastError();
-        std::println(std::cout, "send failed: {}", err);
+        std::println("send failed: {}", err);
         close();
         return std::unexpected(err);
     }
-    std::println(std::cout, "Bytes sent: {}", iSendResult);
+    std::println("Bytes sent: {}", iSendResult);
     return iSendResult;
 }
 
 void ConnectionSocket::Impl::close() {
-    std::println(std::cout, "Connection socket closed");
+    std::println("Connection socket closed");
     const int iResult = shutdown(socket_, SD_SEND);
     if (iResult == SOCKET_ERROR) {
-        std::println(std::cout, "shutdown failed: {}", WSAGetLastError());
+        std::println("shutdown failed: {}", WSAGetLastError());
     }
     closesocket(socket_);
     socket_ = INVALID_SOCKET;
@@ -130,7 +129,7 @@ void ConnectionSocket::Impl::close() {
 }
 
 ConnectionSocket::Impl::~Impl() {
-    std::println(std::cout, "Connection socket dropped");
+    std::println("Connection socket dropped");
     if (!closed_) {
         close();
     }

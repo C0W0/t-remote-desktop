@@ -3,20 +3,16 @@
 //
 
 #include "tcp/Server.h"
-
-#include <iostream>
-#include <print>
-
 #include "tcp/Socket.h"
 
-#include <string>
+#include <print>
 
 using namespace network;
 
 std::expected<TcpServer, int> TcpServer::CreateServer(const uint16_t port) {
     std::expected<ListeningSocket, int> result = ListeningSocket::Listen(port);
     return std::move(result).transform([port](ListeningSocket&& socket) {
-        std::println(std::cout, "Listening on localhost:{}", port);
+        std::println("Listening on localhost:{}", port);
         return TcpServer(std::move(socket));
     });
 }
