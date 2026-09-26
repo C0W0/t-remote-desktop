@@ -61,6 +61,7 @@ ConnectionSocket::Impl::Connect(const char* address, const uint16_t port) {
 
     SOCKET connectSocket{};
     addrinfo* originalResultPtr = result;
+    bool connected = false;
     for(; result != nullptr; result = result->ai_next) {
         // Create a SOCKET for connecting to server
         connectSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
@@ -74,12 +75,19 @@ ConnectionSocket::Impl::Connect(const char* address, const uint16_t port) {
         // Connect to server.
         iResult = connect(connectSocket, result->ai_addr, static_cast<int>(result->ai_addrlen));
         if (iResult != SOCKET_ERROR) {
+            connected = true;
             break;
         }
         closesocket(connectSocket);
     }
 
     freeaddrinfo(originalResultPtr);
+
+    if (!connected) {
+        const int err = WSAGetLastError();
+        std::println("socket failed with error: {}", err);
+        return std::unexpected(err);
+    }
 
     std::unique_ptr<ConnectionSocket::Impl> socketImpl{new ConnectionSocket::Impl{}};
     socketImpl->socket_ = connectSocket;
