@@ -1,0 +1,145 @@
+//
+// Created by Terry on 9/25/26.
+//
+
+
+#include <print>
+
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <netdb.h>
+
+
+#include "tcp/Socket.h"
+#include "ConnectionSocketPosixImpl.h"
+
+#include <cstring>
+
+#include "ListeningSocketPosixImpl.h"
+
+using namespace network;
+
+std::expected<std::unique_ptr<ConnectionSocket::Impl>, int>
+ConnectionSocket::Impl::Accept(const ListeningSocket& listeningSocket, AddrInfo* outAddrInfo) {
+    sockaddr_in clientAddr{};
+    int clientSocketFd;
+    if (outAddrInfo != nullptr) {
+        socklen_t addrLen = sizeof(clientAddr);
+        clientSocketFd = accept(listeningSocket.pImpl_->getSocket(), reinterpret_cast<sockaddr*>(&clientAddr), &addrLen);
+    } else {
+        clientSocketFd = accept(listeningSocket.pImpl_->getSocket(), nullptr, nullptr);
+    }
+
+    if (clientSocketFd < 0) {
+        std::println("accept failed: {}", errno);
+        return std::unexpected(clientSocketFd);
+    }
+
+    if (outAddrInfo != nullptr) {
+        outAddrInfo->address.resize(INET_ADDRSTRLEN);
+        inet_ntop(AF_INET, &clientAddr.sin_addr, outAddrInfo->address.data(), INET_ADDRSTRLEN);
+        outAddrInfo->address.resize(std::strlen(outAddrInfo->address.data()));
+        outAddrInfo->port = ntohs(clientAddr.sin_port);
+    }
+
+    std::unique_ptr<ConnectionSocket::Impl> socketImpl{new ConnectionSocket::Impl{}};
+    socketImpl->socketFd_ = clientSocketFd;
+    return socketImpl;
+}
+
+std::expected<std::unique_ptr<ConnectionSocket::Impl>, int>
+ConnectionSocket::Impl::Connect(const char* address, uint16_t port) {
+    addrinfo hints{};
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+    addrinfo* result = nullptr;
+
+    // Resolve the local address and port to be used by the server
+    int iResult = getaddrinfo(address, std::to_string(port).c_str(), &hints, &result);
+    if (iResult != 0) {
+        std::println("getaddrinfo failed: {}", iResult);
+        return std::unexpected(iResult);
+    }
+
+    int connectSocket{};
+    addrinfo* originalResultPtr = result;
+    for(; result != nullptr; result = result->ai_next) {
+        // Create a SOCKET for connecting to server
+        connectSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+        if (connectSocket == -1) {
+            const int err = errno;
+            std::println("socket failed with error: {}", err);
+            freeaddrinfo(originalResultPtr);
+            return std::unexpected(err);
+        }
+
+        // Connect to server.
+        iResult = connect(connectSocket, result->ai_addr, static_cast<int>(result->ai_addrlen));
+        if (iResult == 0) {
+            break;
+        }
+        ::close(connectSocket);
+        connectSocket = -1;
+    }
+
+    freeaddrinfo(originalResultPtr);
+
+    std::unique_ptr<ConnectionSocket::Impl> socketImpl{new ConnectionSocket::Impl{}};
+    socketImpl->socketFd_ = connectSocket;
+
+    return socketImpl;
+}
+
+std::expected<int, int> ConnectionSocket::Impl::recv(std::span<char> buffer) {
+    const ssize_t bytesRecv = ::recv(this->socketFd_, buffer.data(), buffer.size(), 0);
+
+    if (bytesRecv == 0) {
+        std::println("connection closed");
+        return std::unexpected(0);
+    }
+
+    // error
+    if (bytesRecv < 0) {
+        const int err = errno;
+        std::println("recv failed: {}", err);
+        close();
+        return std::unexpected(err);
+    }
+
+    return bytesRecv;
+}
+
+std::expected<int, int> ConnectionSocket::Impl::send(std::string_view buffer) {
+    const int iSendResult = ::send(socketFd_, buffer.data(), buffer.size(), 0);
+    if (iSendResult == -1) {
+        const int err = errno;
+        std::println("send failed: {}", err);
+        close();
+        return std::unexpected(err);
+    }
+    std::println("Bytes sent: {}", iSendResult);
+    return iSendResult;
+}
+
+void ConnectionSocket::Impl::close() {
+    std::println("Connection socket closed");
+    const int iResult = shutdown(socketFd_, SHUT_WR);
+    if (iResult == -1) {
+        std::println("shutdown failed: {}", errno);
+    }
+    ::close(socketFd_);
+    socketFd_ = -1;
+    closed_ = true;
+}
+
+ConnectionSocket::Impl::~Impl() {
+    std::println("Connection socket dropped");
+    if (!closed_) {
+        close();
+    }
+}

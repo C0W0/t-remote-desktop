@@ -11,6 +11,12 @@ if (WIN32)
             src/windows/ListeningSocketWinImpl.cpp
     )
     target_link_libraries(network PRIVATE ws2_32)
+else ()
+    target_sources(network
+            PRIVATE
+            src/posix/ConnectionSocketPosixImpl.cpp
+            src/posix/ListeningSocketPosixImpl.cpp
+    )
 endif ()
 
 target_include_directories(network

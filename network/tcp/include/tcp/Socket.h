@@ -5,6 +5,7 @@
 #ifndef TRDP_SOCKET_H
 #define TRDP_SOCKET_H
 
+#include <atomic>
 #include <memory>
 #include <cstdint>
 #include <expected>

@@ -7,8 +7,10 @@
 #ifdef WIN32
 #include "windows/ConnectionSocketWinImpl.h"
 #include "windows/ListeningSocketWinImpl.h"
+#else
+#include "posix/ConnectionSocketPosixImpl.h"
+#include "posix/ListeningSocketPosixImpl.h"
 #endif
-
 
 using namespace network;
 
