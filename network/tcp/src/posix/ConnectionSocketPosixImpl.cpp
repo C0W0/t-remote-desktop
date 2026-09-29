@@ -89,14 +89,14 @@ ConnectionSocket::Impl::Connect(const char* address, uint16_t port) {
         ::close(connectSocket);
         connectSocket = -1;
     }
+    
+    freeaddrinfo(originalResultPtr);
 
     if (!connected) {
         const int err = errno;
         std::println("socket failed with error: {}", err);
         return std::unexpected(err);
     }
-
-    freeaddrinfo(originalResultPtr);
 
     std::unique_ptr<ConnectionSocket::Impl> socketImpl{new ConnectionSocket::Impl{}};
     socketImpl->socketFd_ = connectSocket;
