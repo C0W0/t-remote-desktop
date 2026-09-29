@@ -4,3 +4,5 @@
 out
 build/**
 build-ide/**
+# Per-user CMake presets
+CMakeUserPresets.json

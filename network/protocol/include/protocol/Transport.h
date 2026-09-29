@@ -8,9 +8,11 @@
 #include <array>
 #include <concepts>
 #include <bit>
+#include <cstdint>
 #include <expected>
 #include <span>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace network {

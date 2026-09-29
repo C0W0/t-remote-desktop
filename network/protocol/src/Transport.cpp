@@ -2,6 +2,8 @@
 // Created by Terry on 2026-07-21.
 //
 
+#include <cstring>
+
 #include "protocol/Transport.h"
 
 namespace network {

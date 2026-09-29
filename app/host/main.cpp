@@ -18,7 +18,7 @@ int main() {
 
     std::atomic<bool> closed{false};
     std::jthread thread;
-    network::ArcConnectionSocket arcConnectionSocket;
+    network::ArcConnectionSocket arcConnectionSocket = nullptr;
     server.onAccept([&thread, &closed, &arcConnectionSocket](network::AddrInfo addrInfo, network::ConnectionSocket connectionSocket, network::TcpServer& server) {
         closed = false;
         std::println("accepted new connection from {}:{}", addrInfo.address, addrInfo.port);
