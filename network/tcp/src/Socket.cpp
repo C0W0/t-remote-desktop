@@ -79,7 +79,7 @@ std::expected<void, int> ConnectionSocket::recv(std::span<char> buffer, int exac
 std::expected<void, int> ConnectionSocket::send(std::span<const char> buffer) const {
     int bytesSent = 0;
     while (bytesSent < buffer.size()) {
-        auto result = pImpl_->send(buffer);
+        auto result = pImpl_->send(buffer.subspan(bytesSent));
         if (!result) {
             return std::unexpected(result.error());
         }
