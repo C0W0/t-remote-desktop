@@ -23,6 +23,27 @@
 
 using namespace network;
 
+namespace {
+// Sending to a peer that has already closed raises SIGPIPE, which terminates the process by default.
+// macOS/BSD: suppress per-socket via SO_NOSIGPIPE. Linux: suppress per-call via MSG_NOSIGNAL (see send()).
+// Returns 0 on success, otherwise errno.
+int suppressSigPipe([[maybe_unused]] const int fd) {
+#ifdef SO_NOSIGPIPE
+    constexpr int enable = 1;
+    if (setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &enable, sizeof(enable)) == -1) {
+        return errno;
+    }
+#endif
+    return 0;
+}
+
+#ifdef MSG_NOSIGNAL
+constexpr int kSendFlags = MSG_NOSIGNAL;
+#else
+constexpr int kSendFlags = 0;
+#endif
+}
+
 std::expected<std::unique_ptr<ConnectionSocket::Impl>, int>
 ConnectionSocket::Impl::Accept(const ListeningSocket& listeningSocket, AddrInfo* outAddrInfo) {
     sockaddr_in clientAddr{};
@@ -37,6 +58,12 @@ ConnectionSocket::Impl::Accept(const ListeningSocket& listeningSocket, AddrInfo*
     if (clientSocketFd < 0) {
         const int err = errno;
         std::println("accept failed: {}", err);
+        return std::unexpected(err);
+    }
+
+    if (const int err = suppressSigPipe(clientSocketFd); err != 0) {
+        std::println("failed to set SO_NOSIGPIPE: {}", err);
+        ::close(clientSocketFd);
         return std::unexpected(err);
     }
 
@@ -76,6 +103,13 @@ ConnectionSocket::Impl::Connect(const char* address, uint16_t port) {
         if (connectSocket == -1) {
             const int err = errno;
             std::println("socket failed with error: {}", err);
+            freeaddrinfo(originalResultPtr);
+            return std::unexpected(err);
+        }
+
+        if (const int err = suppressSigPipe(connectSocket); err != 0) {
+            std::println("failed to set SO_NOSIGPIPE: {}", err);
+            ::close(connectSocket);
             freeaddrinfo(originalResultPtr);
             return std::unexpected(err);
         }
@@ -124,7 +158,7 @@ std::expected<int, int> ConnectionSocket::Impl::recv(std::span<char> buffer) {
 }
 
 std::expected<int, int> ConnectionSocket::Impl::send(std::span<const char> buffer) {
-    const int iSendResult = ::send(socketFd_, buffer.data(), buffer.size(), 0);
+    const int iSendResult = ::send(socketFd_, buffer.data(), buffer.size(), kSendFlags);
     if (iSendResult == -1) {
         const int err = errno;
         std::println("send failed: {}", err);
