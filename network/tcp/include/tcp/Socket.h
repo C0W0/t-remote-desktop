@@ -38,7 +38,7 @@ public:
 
     std::expected<int, int> recv(std::span<char> buffer) const;
     std::expected<void, int> recv(std::span<char> buffer, int exactSize) const;
-    std::expected<void, int> send(std::string_view buffer) const;
+    std::expected<void, int> send(std::span<const char> buffer) const;
     void close();
 
     class Impl;

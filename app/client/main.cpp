@@ -1,19 +1,24 @@
 #include <print>
 
 #include "tcp/Socket.h"
+#include "protocol/Transport.h"
 
 #define DEFAULT_PORT "27015"
 #define DEFAULT_BUFLEN 512
 
 int main() {
-    auto result = network::ConnectionSocket::Connect("100.109.181.42", 27015);
+    auto result = network::ConnectionSocket::Connect("localhost", 27015);
     if (!result) {
         std::println("Failed to connect to the server");
         return 1;
     }
     network::ConnectionSocket& socket = result.value();
 
-    auto sendResult = socket.send("Hello world from C++");
+    auto sendResult = socket.send(network::serializeHeaderA(network::TransportHeader {
+        network::MessageType::Auth,
+        0,
+        0
+    }));
     if (!sendResult.has_value()) {
         std::println("failed to send");
         return 1;
@@ -24,7 +29,7 @@ int main() {
 
     auto recvResult = socket.recv({buffer.data(), buffer.size()});
     if (!recvResult.has_value()) {
-        std::println("failed to recv");
+        std::println("failed to recv: {}", recvResult.error());
         return 1;
     }
     std::println("received {}", recvResult.value());

@@ -19,7 +19,7 @@ public:
     ~Impl();
 
     std::expected<int, int> recv(std::span<char> buffer);
-    std::expected<int, int> send(std::string_view buffer);
+    std::expected<int, int> send(std::span<const char> buffer);
 
     void close();
 

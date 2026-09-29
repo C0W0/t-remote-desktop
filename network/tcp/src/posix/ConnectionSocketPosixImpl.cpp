@@ -114,7 +114,7 @@ std::expected<int, int> ConnectionSocket::Impl::recv(std::span<char> buffer) {
     return bytesRecv;
 }
 
-std::expected<int, int> ConnectionSocket::Impl::send(std::string_view buffer) {
+std::expected<int, int> ConnectionSocket::Impl::send(std::span<const char> buffer) {
     const int iSendResult = ::send(socketFd_, buffer.data(), buffer.size(), 0);
     if (iSendResult == -1) {
         const int err = errno;
