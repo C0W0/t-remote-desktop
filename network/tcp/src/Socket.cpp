@@ -65,9 +65,12 @@ std::expected<int, int> ConnectionSocket::recv(std::span<char> buffer) const {
 }
 
 std::expected<void, int> ConnectionSocket::recv(std::span<char> buffer, int exactSize) const {
+    if (exactSize > buffer.size()) {
+        return std::unexpected(-1);
+    }
     int bytesReceived = 0;
     while (bytesReceived < exactSize) {
-        auto result = pImpl_->recv(buffer.subspan(bytesReceived));
+        auto result = pImpl_->recv(buffer.subspan(bytesReceived, exactSize - bytesReceived));
         if (!result) {
             return std::unexpected(result.error());
         }

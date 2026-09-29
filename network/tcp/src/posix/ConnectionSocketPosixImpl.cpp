@@ -35,8 +35,9 @@ ConnectionSocket::Impl::Accept(const ListeningSocket& listeningSocket, AddrInfo*
     }
 
     if (clientSocketFd < 0) {
-        std::println("accept failed: {}", errno);
-        return std::unexpected(clientSocketFd);
+        const int err = errno;
+        std::println("accept failed: {}", err);
+        return std::unexpected(err);
     }
 
     if (outAddrInfo != nullptr) {
@@ -68,6 +69,7 @@ ConnectionSocket::Impl::Connect(const char* address, uint16_t port) {
 
     int connectSocket{};
     addrinfo* originalResultPtr = result;
+    bool connected = false;
     for(; result != nullptr; result = result->ai_next) {
         // Create a SOCKET for connecting to server
         connectSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
@@ -81,10 +83,17 @@ ConnectionSocket::Impl::Connect(const char* address, uint16_t port) {
         // Connect to server.
         iResult = connect(connectSocket, result->ai_addr, static_cast<int>(result->ai_addrlen));
         if (iResult == 0) {
+            connected = true;
             break;
         }
         ::close(connectSocket);
         connectSocket = -1;
+    }
+
+    if (!connected) {
+        const int err = errno;
+        std::println("socket failed with error: {}", err);
+        return std::unexpected(err);
     }
 
     freeaddrinfo(originalResultPtr);
