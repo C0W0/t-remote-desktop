@@ -29,7 +29,8 @@ ListeningSocket& ListeningSocket::operator=(ListeningSocket&& other) noexcept = 
 ListeningSocket::~ListeningSocket() = default;
 
 void ListeningSocket::close() {
-    pImpl_->abort();
+    if (pImpl_)
+        pImpl_->abort();
 }
 
 
@@ -92,6 +93,7 @@ std::expected<void, int> ConnectionSocket::send(std::span<const char> buffer) co
 }
 
 void ConnectionSocket::close() {
-    pImpl_->close();
+    if (pImpl_)
+        pImpl_->close();
 }
 
