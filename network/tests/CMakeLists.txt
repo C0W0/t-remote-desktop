@@ -1,0 +1,11 @@
+add_executable(network_tests
+    tcp/TcpTest.cpp
+    tcp/ServerTest.cpp
+)
+target_link_libraries(network_tests
+    PRIVATE
+        network
+        GTest::gtest_main
+        GTest::gmock
+)
+gtest_discover_tests(network_tests)
