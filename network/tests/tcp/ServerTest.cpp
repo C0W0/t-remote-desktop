@@ -1,11 +1,10 @@
-#include <gtest/gtest.h>
+#include "TestUtil.h"
+#include "tcp/Server.h"
 
+#include <gtest/gtest.h>
 #include <memory>
 #include <optional>
 #include <thread>
-
-#include "TestUtil.h"
-#include "tcp/Server.h"
 
 using namespace network;
 using namespace network::testutil;

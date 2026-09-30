@@ -6,10 +6,10 @@
 #define TRDP_LISTENINGSOCKETWINIMPL_H
 
 #include <atomic>
-
-#include "tcp/Socket.h"
 #include <winsock2.h>
 #include <ws2tcpip.h>
+
+#include "tcp/Socket.h"
 
 namespace network {
 class ListeningSocket::Impl {

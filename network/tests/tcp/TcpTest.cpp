@@ -1,12 +1,11 @@
-#include <gtest/gtest.h>
+#include "TestUtil.h"
 
 #include <atomic>
 #include <csignal>
+#include <gtest/gtest.h>
 #include <random>
 #include <thread>
 #include <vector>
-
-#include "TestUtil.h"
 
 using namespace network;
 using namespace network::testutil;

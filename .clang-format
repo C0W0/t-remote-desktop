@@ -1,0 +1,23 @@
+---
+Language: Cpp
+BasedOnStyle: LLVM
+Standard: Latest
+
+# Match the existing codebase so enabling clang-format does not reflow it.
+IndentWidth: 4
+AccessModifierOffset: -4
+ColumnLimit: 0
+
+# Include handling.
+#
+# `Preserve` sorts includes *within* each blank-line-delimited block but never
+# moves an include from one block to another. That is deliberate: this project
+# orders system headers ABOVE project headers in .h files and BELOW them in
+# .cpp files, and clang-format's IncludeCategories priorities are global to a
+# format run -- there is no way to vary them by file extension. Using
+# `Regroup` with any fixed priority would therefore silently invert the group
+# order in half the files.
+#
+# The group order itself is enforced by tools/check_include_order.py.
+SortIncludes: CaseSensitive
+IncludeBlocks: Preserve

@@ -2,25 +2,19 @@
 // Created by Terry on 9/25/26.
 //
 
-
-#include <print>
-
-
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <netdb.h>
-
-
-#include "tcp/Socket.h"
 #include "ConnectionSocketPosixImpl.h"
-
-#include <cstring>
-
 #include "ListeningSocketPosixImpl.h"
+#include "tcp/Socket.h"
+
+#include <arpa/inet.h>
+#include <cstring>
+#include <fcntl.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <print>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 using namespace network;
 

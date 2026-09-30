@@ -20,3 +20,20 @@ endif ()
 
 add_subdirectory(network)
 add_subdirectory(app)
+
+# Enforces the include-ordering convention: system headers above project headers
+# in .h files, below them in .cpp files. This cannot live in .clang-format --
+# IncludeCategories priorities are global to a format run and cannot vary by file
+# extension -- so it is a standalone check. Run with: cmake --build . --target check-include-order
+find_package(Python3 COMPONENTS Interpreter)
+if (Python3_Interpreter_FOUND)
+    add_custom_target(check-include-order
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/check_include_order.py
+                ${CMAKE_CURRENT_SOURCE_DIR}/app
+                ${CMAKE_CURRENT_SOURCE_DIR}/network
+        COMMENT "Checking include order"
+        VERBATIM
+    )
+else ()
+    message(STATUS "Python3 not found; target 'check-include-order' unavailable")
+endif ()

@@ -1,9 +1,9 @@
+#include "protocol/Transport.h"
+#include "tcp/Server.h"
+
 #include <print>
 #include <string>
 #include <thread>
-
-#include "tcp/Server.h"
-#include "protocol/Transport.h"
 
 #define DEFAULT_PORT "27015"
 #define DEFAULT_BUFLEN 512

@@ -1,7 +1,7 @@
-#include <print>
-
-#include "tcp/Socket.h"
 #include "protocol/Transport.h"
+#include "tcp/Socket.h"
+
+#include <print>
 
 #define DEFAULT_PORT "27015"
 #define DEFAULT_BUFLEN 512

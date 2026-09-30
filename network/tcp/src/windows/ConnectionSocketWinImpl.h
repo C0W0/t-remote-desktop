@@ -6,10 +6,10 @@
 #define TRDP_CONNECTIONSOCKETWINIMPL_H
 
 #include <span>
-
-#include "tcp/Socket.h"
 #include <winsock2.h>
 #include <ws2tcpip.h>
+
+#include "tcp/Socket.h"
 
 namespace network {
 class ConnectionSocket::Impl {
