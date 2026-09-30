@@ -246,7 +246,25 @@ TEST_F(TcpTest, ClosedListenerRefusesNewConnections) {
 TEST(TcpStressTest, CloseWhileClientsAreConnecting) {
     std::mt19937 rng(12345);
 
-    // Kept modest: on Windows a refused loopback connect can take a couple of seconds to fail.
+    // Client threads from every iteration. On Windows a refused loopback connect can take 1-2 seconds to
+    // fail, and clients are mid-Connect when the listener closes. The acceptor's result doesn't depend on
+    // them, so they are only joined once, when this object goes out of scope, letting those slow
+    // refusals overlap across iterations. The destructor also runs on an early ASSERT return: it stops
+    // every client first, so a failing test can't leave threads spinning or hit std::terminate.
+    struct ClientThreads {
+        std::vector<std::shared_ptr<std::atomic<bool>>> stopFlags;
+        std::vector<std::thread> threads;
+
+        ~ClientThreads() {
+            for (auto& stop : stopFlags) {
+                *stop = true;
+            }
+            for (auto& thread : threads) {
+                thread.join();
+            }
+        }
+    } clients;
+
     constexpr int kIterations = 10;
     for (int iter = 0; iter < kIterations; ++iter) {
         const uint16_t port = nextPort();
@@ -263,11 +281,12 @@ TEST(TcpStressTest, CloseWhileClientsAreConnecting) {
             }
         });
 
-        std::atomic<bool> stop{false};
-        std::vector<std::thread> clients;
+        // Per-iteration flag held by shared_ptr: these threads can outlive the iteration.
+        auto stop = std::make_shared<std::atomic<bool>>(false);
+        clients.stopFlags.push_back(stop);
         for (int c = 0; c < 3; ++c) {
-            clients.emplace_back([port, &stop] {
-                while (!stop) {
+            clients.threads.emplace_back([port, stop] {
+                while (!*stop) {
                     auto socket = ConnectionSocket::Connect(kLoopback, port);
                     (void)socket;
                 }
@@ -276,10 +295,7 @@ TEST(TcpStressTest, CloseWhileClientsAreConnecting) {
 
         std::this_thread::sleep_for(std::chrono::microseconds(rng() % 3000));
         listener->close();
-        stop = true;
-        for (auto& t : clients) {
-            t.join();
-        }
+        *stop = true;
 
         auto result = acceptor.waitFor();
         ASSERT_TRUE(result.has_value()) << "acceptor hung (iteration " << iter << ")";
