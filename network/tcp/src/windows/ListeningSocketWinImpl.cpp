@@ -55,19 +55,102 @@ std::expected<std::unique_ptr<ListeningSocket::Impl>, int> ListeningSocket::Impl
         return std::unexpected(err);
     }
 
+    // Both events are manual-reset and initially non-signalled.
+    WSAEVENT acceptEvent = WSACreateEvent();
+    if (acceptEvent == WSA_INVALID_EVENT) {
+        const int err = WSAGetLastError();
+        std::println("WSACreateEvent failed: {}", err);
+        closesocket(listenSocket);
+        return std::unexpected(err);
+    }
+
+    WSAEVENT abortEvent = WSACreateEvent();
+    if (abortEvent == WSA_INVALID_EVENT) {
+        const int err = WSAGetLastError();
+        std::println("WSACreateEvent failed: {}", err);
+        WSACloseEvent(acceptEvent);
+        closesocket(listenSocket);
+        return std::unexpected(err);
+    }
+
+    // Have Winsock signal acceptEvent while a connection is pending. This also switches the listening
+    // socket to non-blocking mode, so accept() can never block after the event fires (e.g. the pending
+    // connection was reset in between).
+    if (WSAEventSelect(listenSocket, acceptEvent, FD_ACCEPT) == SOCKET_ERROR) {
+        const int err = WSAGetLastError();
+        std::println("WSAEventSelect failed: {}", err);
+        WSACloseEvent(abortEvent);
+        WSACloseEvent(acceptEvent);
+        closesocket(listenSocket);
+        return std::unexpected(err);
+    }
+
     std::unique_ptr<ListeningSocket::Impl> socketImpl{new ListeningSocket::Impl{}};
     socketImpl->socket_ = listenSocket;
+    socketImpl->acceptEvent_ = acceptEvent;
+    socketImpl->abortEvent_ = abortEvent;
     return std::move(socketImpl);
 }
 
+int ListeningSocket::Impl::waitForConnection() {
+    // abortEvent_ is first: if both are signalled, WSAWaitForMultipleEvents reports the lowest index, so
+    // an abort wins over a pending connection (same priority as the POSIX implementation).
+    const WSAEVENT events[2] = {abortEvent_, acceptEvent_};
+
+    while (true) {
+        const DWORD result = WSAWaitForMultipleEvents(2, events, FALSE, WSA_INFINITE, FALSE);
+        if (result == WSA_WAIT_FAILED) {
+            return WSAGetLastError();
+        }
+
+        // We are the only user of the listening socket, so it is safe to close it here: no other thread
+        // can be inside accept() on it.
+        if (result == WSA_WAIT_EVENT_0) {
+            closeListeningSocket();
+            return kAcceptAborted;
+        }
+
+        // acceptEvent_ fired. Reading the network events also resets the (manual-reset) event.
+        WSANETWORKEVENTS networkEvents{};
+        if (WSAEnumNetworkEvents(socket_, acceptEvent_, &networkEvents) == SOCKET_ERROR) {
+            return WSAGetLastError();
+        }
+        if ((networkEvents.lNetworkEvents & FD_ACCEPT) != 0) {
+            // 0 means a connection is pending; otherwise the listening socket itself failed.
+            return networkEvents.iErrorCode[FD_ACCEPT_BIT];
+        }
+        // Spurious wake-up with no FD_ACCEPT recorded: keep waiting.
+    }
+}
+
 void ListeningSocket::Impl::abort() {
-    closesocket(socket_);
-    socket_ = INVALID_SOCKET;
+    if (aborted_.exchange(true)) {
+        return;
+    }
+
+    // Wake the accepting thread. The event is never reset, so it stays signalled and any later
+    // waitForConnection() also returns kAcceptAborted. abortEvent_ is immutable until the destructor.
+    WSASetEvent(abortEvent_);
+}
+
+void ListeningSocket::Impl::closeListeningSocket() {
+    if (socket_ != INVALID_SOCKET) {
+        closesocket(socket_);
+        socket_ = INVALID_SOCKET;
+    }
 }
 
 ListeningSocket::Impl::~Impl() {
     std::println("Listening socket closed");
-    abort();
+    closeListeningSocket();
+    if (acceptEvent_ != WSA_INVALID_EVENT) {
+        WSACloseEvent(acceptEvent_);
+        acceptEvent_ = WSA_INVALID_EVENT;
+    }
+    if (abortEvent_ != WSA_INVALID_EVENT) {
+        WSACloseEvent(abortEvent_);
+        abortEvent_ = WSA_INVALID_EVENT;
+    }
 }
 
 

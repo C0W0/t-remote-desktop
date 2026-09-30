@@ -2,6 +2,7 @@
 // Created by Terry on 2026-07-10.
 //
 
+#include <cstring>
 #include <print>
 
 #include "tcp/Socket.h"
@@ -13,19 +14,51 @@ using namespace network;
 
 std::expected<std::unique_ptr<ConnectionSocket::Impl>, int>
 ConnectionSocket::Impl::Accept(const ListeningSocket& listeningSocket, AddrInfo* outAddrInfo) {
+    auto& listener = *listeningSocket.pImpl_;
+
     sockaddr_in clientAddr {};
-    SOCKET clientSocket {};
-    if (outAddrInfo != nullptr) {
+    SOCKET clientSocket = INVALID_SOCKET;
+    while (true) {
+        // Blocks until a connection is pending or ListeningSocket::close() is called.
+        if (const int err = listener.waitForConnection(); err != 0) {
+            if (err != kAcceptAborted) {
+                std::println("accept failed: {}", err);
+            }
+            return std::unexpected(err);
+        }
+
         int addrLen = sizeof(clientAddr);
-        clientSocket = accept(listeningSocket.pImpl_->getSocket(), static_cast<sockaddr*>(static_cast<void*>(&clientAddr)), &addrLen);
-    }
-    else {
-        clientSocket = accept(listeningSocket.pImpl_->getSocket(), nullptr, nullptr);
+        clientSocket = accept(
+            listener.getSocket(),
+            outAddrInfo != nullptr ? reinterpret_cast<sockaddr*>(&clientAddr) : nullptr,
+            outAddrInfo != nullptr ? &addrLen : nullptr
+        );
+        if (clientSocket != INVALID_SOCKET) {
+            break;
+        }
+
+        // Transient: the pending connection may have gone away between the event and accept().
+        const int err = WSAGetLastError();
+        if (err == WSAEWOULDBLOCK || err == WSAECONNRESET || err == WSAEINTR) {
+            continue;
+        }
+        std::println("accept failed: {}", err);
+        return std::unexpected(err);
     }
 
-    if (clientSocket == INVALID_SOCKET) {
+    // An accepted socket inherits the listening socket's properties: its WSAEventSelect registration and
+    // the non-blocking mode that comes with it. Connection sockets use blocking I/O, so undo both.
+    if (WSAEventSelect(clientSocket, nullptr, 0) == SOCKET_ERROR) {
         const int err = WSAGetLastError();
-        std::println("accept failed: {}", err);
+        std::println("failed to cancel event selection on accepted socket: {}", err);
+        closesocket(clientSocket);
+        return std::unexpected(err);
+    }
+    u_long blockingMode = 0;
+    if (ioctlsocket(clientSocket, FIONBIO, &blockingMode) == SOCKET_ERROR) {
+        const int err = WSAGetLastError();
+        std::println("failed to set accepted socket to blocking: {}", err);
+        closesocket(clientSocket);
         return std::unexpected(err);
     }
 
