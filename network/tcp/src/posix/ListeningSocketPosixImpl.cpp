@@ -7,15 +7,48 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
+#include <poll.h>
 #include <unistd.h>
 #include <netdb.h>
 
+#include <cerrno>
 #include <print>
 #include <string>
 
 #include "ListeningSocketPosixImpl.h"
 
 using namespace network;
+
+namespace {
+// Returns 0 on success, otherwise errno.
+int setNonBlockingCloexec(const int fd) {
+    const int flags = fcntl(fd, F_GETFL, 0);
+    if (flags == -1 || fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1) {
+        return errno;
+    }
+    if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1) {
+        return errno;
+    }
+    return 0;
+}
+
+// Creates a non-blocking, close-on-exec pipe. Returns 0 on success, otherwise errno.
+int makeWakePipe(int (&fds)[2]) {
+    if (pipe(fds) == -1) {
+        return errno;
+    }
+    for (const int fd : fds) {
+        if (const int err = setNonBlockingCloexec(fd); err != 0) {
+            ::close(fds[0]);
+            ::close(fds[1]);
+            fds[0] = fds[1] = -1;
+            return err;
+        }
+    }
+    return 0;
+}
+}
 
 std::expected<std::unique_ptr<ListeningSocket::Impl>, int> ListeningSocket::Impl::Listen(uint16_t port) {
     addrinfo *result = nullptr;
@@ -59,17 +92,85 @@ std::expected<std::unique_ptr<ListeningSocket::Impl>, int> ListeningSocket::Impl
         return std::unexpected(err);
     }
 
+    // Non-blocking so that accept() can never block after poll() reports readiness
+    // (e.g. the pending connection was reset in between).
+    if (const int err = setNonBlockingCloexec(listenSocketFd); err != 0) {
+        std::println("failed to configure listening socket: {}", err);
+        ::close(listenSocketFd);
+        return std::unexpected(err);
+    }
+
+    int wakeFds[2] = {-1, -1};
+    if (const int err = makeWakePipe(wakeFds); err != 0) {
+        std::println("failed to create wake pipe: {}", err);
+        ::close(listenSocketFd);
+        return std::unexpected(err);
+    }
+
     std::unique_ptr<ListeningSocket::Impl> socketImpl{new ListeningSocket::Impl{}};
     socketImpl->socketFd_ = listenSocketFd;
+    socketImpl->wakeFds_[0] = wakeFds[0];
+    socketImpl->wakeFds_[1] = wakeFds[1];
     return socketImpl;
 }
 
+int ListeningSocket::Impl::waitForConnection() {
+    pollfd fds[2] = {
+        {.fd = socketFd_, .events = POLLIN, .revents = 0},
+        {.fd = wakeFds_[0], .events = POLLIN, .revents = 0},
+    };
+
+    while (true) {
+        if (poll(fds, 2, -1) == -1) {
+            if (errno == EINTR) {
+                continue;
+            }
+            return errno;
+        }
+
+        // Check the wake pipe first. We are the only user of the listening socket, so it is safe to
+        // close it here: no other thread can be inside accept() on it.
+        if (fds[1].revents != 0) {
+            closeListeningSocket();
+            return kAcceptAborted;
+        }
+        if ((fds[0].revents & POLLIN) != 0) {
+            return 0;
+        }
+        if ((fds[0].revents & (POLLERR | POLLHUP | POLLNVAL)) != 0) {
+            return EBADF;
+        }
+    }
+}
+
 void ListeningSocket::Impl::abort() {
-    ::close(socketFd_);
-    socketFd_ = -1;
+    if (aborted_.exchange(true)) {
+        return;
+    }
+
+    // Wake the accepting thread. The pipe is never drained, so it stays readable and any later
+    // waitForConnection() also returns kAcceptAborted. wakeFds_ is immutable until the destructor.
+    constexpr char wake = 1;
+    ssize_t written;
+    do {
+        written = ::write(wakeFds_[1], &wake, 1);
+    } while (written == -1 && errno == EINTR);
+}
+
+void ListeningSocket::Impl::closeListeningSocket() {
+    if (socketFd_ != -1) {
+        ::close(socketFd_);
+        socketFd_ = -1;
+    }
 }
 
 ListeningSocket::Impl::~Impl() {
     std::println("Listening socket closed");
-    abort();
+    closeListeningSocket();
+    for (int& fd : wakeFds_) {
+        if (fd != -1) {
+            ::close(fd);
+            fd = -1;
+        }
+    }
 }

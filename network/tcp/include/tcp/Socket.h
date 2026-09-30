@@ -18,6 +18,10 @@ class ListeningSocket;
 
 using ArcConnectionSocket = std::atomic<std::shared_ptr<ConnectionSocket>>;
 
+// Error returned by ConnectionSocket::Accept when the ListeningSocket was closed (ListeningSocket::close()).
+// Equal to WSAEINTR, which is what Winsock reports for an accept() interrupted by closesocket().
+inline constexpr int kAcceptAborted = 10004;
+
 struct AddrInfo {
     std::string address;
     uint16_t port;

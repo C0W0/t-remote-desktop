@@ -136,7 +136,7 @@ int main() {
     while (!closed) {
         auto acceptResult = server.accept();
         if (!acceptResult.has_value()) {
-            if (acceptResult.error() == 10004) {
+            if (acceptResult.error() == network::kAcceptAborted) {
                 std::println("server closed");
                 break;
             }

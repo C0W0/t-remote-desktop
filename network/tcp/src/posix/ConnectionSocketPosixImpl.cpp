@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <netdb.h>
 
@@ -42,22 +43,55 @@ constexpr int kSendFlags = MSG_NOSIGNAL;
 #else
 constexpr int kSendFlags = 0;
 #endif
+
+// The listening socket is non-blocking, and on BSD/macOS accepted sockets inherit that flag.
+// Connection sockets are used with blocking I/O, so clear it. Returns 0 on success, otherwise errno.
+int setBlocking(const int fd) {
+    const int flags = fcntl(fd, F_GETFL, 0);
+    if (flags == -1 || fcntl(fd, F_SETFL, flags & ~O_NONBLOCK) == -1) {
+        return errno;
+    }
+    return 0;
+}
 }
 
 std::expected<std::unique_ptr<ConnectionSocket::Impl>, int>
 ConnectionSocket::Impl::Accept(const ListeningSocket& listeningSocket, AddrInfo* outAddrInfo) {
+    auto& listener = *listeningSocket.pImpl_;
+
     sockaddr_in clientAddr{};
-    int clientSocketFd;
-    if (outAddrInfo != nullptr) {
+    int clientSocketFd = -1;
+    while (true) {
+        // Blocks until a connection is pending or ListeningSocket::close() is called.
+        if (const int err = listener.waitForConnection(); err != 0) {
+            if (err != kAcceptAborted) {
+                std::println("accept failed: {}", err);
+            }
+            return std::unexpected(err);
+        }
+
         socklen_t addrLen = sizeof(clientAddr);
-        clientSocketFd = accept(listeningSocket.pImpl_->getSocket(), reinterpret_cast<sockaddr*>(&clientAddr), &addrLen);
-    } else {
-        clientSocketFd = accept(listeningSocket.pImpl_->getSocket(), nullptr, nullptr);
+        clientSocketFd = accept(
+            listener.getSocket(),
+            outAddrInfo != nullptr ? reinterpret_cast<sockaddr *>(&clientAddr) : nullptr,
+            outAddrInfo != nullptr ? &addrLen : nullptr
+        );
+        if (clientSocketFd >= 0) {
+            break;
+        }
+
+        // Transient: the pending connection may have gone away between poll() and accept().
+        const int err = errno;
+        if (err == EINTR || err == EAGAIN || err == EWOULDBLOCK || err == ECONNABORTED) {
+            continue;
+        }
+        std::println("accept failed: {}", err);
+        return std::unexpected(err);
     }
 
-    if (clientSocketFd < 0) {
-        const int err = errno;
-        std::println("accept failed: {}", err);
+    if (const int err = setBlocking(clientSocketFd); err != 0) {
+        std::println("failed to set accepted socket to blocking: {}", err);
+        ::close(clientSocketFd);
         return std::unexpected(err);
     }
 
