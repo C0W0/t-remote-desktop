@@ -198,19 +198,25 @@ std::expected<int, int> ConnectionSocket::Impl::send(std::span<const char> buffe
 }
 
 void ConnectionSocket::Impl::close() {
+    if (closed_.exchange(true)) {
+        return;
+    }
     std::println("Connection socket closed");
-    const int iResult = shutdown(socketFd_, SHUT_WR);
+
+    // Signal only: shutdown() makes a recv() blocked on another thread return and makes a blocked send() fail,
+    // but the descriptor stays allocated. Releasing it here would let the OS hand the same number to the next
+    // socket while another thread still uses this one, so that thread would read from / write to the wrong
+    // connection. The descriptor is released in the destructor, when nobody can be using it any more.
+    const int iResult = shutdown(socketFd_, SHUT_RDWR);
     if (iResult == -1) {
         std::println("shutdown failed: {}", errno);
     }
-    ::close(socketFd_);
-    socketFd_ = -1;
-    closed_ = true;
 }
 
 ConnectionSocket::Impl::~Impl() {
     std::println("Connection socket dropped");
-    if (!closed_) {
-        close();
-    }
+    // No-op if close() already ran; otherwise shuts the connection down first.
+    close();
+    // The only place the descriptor is released.
+    ::close(socketFd_);
 }

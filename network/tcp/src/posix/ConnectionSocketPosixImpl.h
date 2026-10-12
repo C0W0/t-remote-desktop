@@ -26,8 +26,10 @@ public:
 private:
     explicit Impl() = default;
 
+    // Never changes after construction and is only released by the destructor, so any thread may read it.
     int socketFd_ = -1;
-    bool closed_ = false;
+    // Set by the first close(); later calls do nothing.
+    std::atomic<bool> closed_ = false;
 };
 }
 
