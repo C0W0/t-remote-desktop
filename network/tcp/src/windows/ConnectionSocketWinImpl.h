@@ -5,6 +5,7 @@
 #ifndef TRDP_CONNECTIONSOCKETWINIMPL_H
 #define TRDP_CONNECTIONSOCKETWINIMPL_H
 
+#include <atomic>
 #include <span>
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -27,8 +28,10 @@ public:
 private:
     explicit Impl() = default;
 
+    // Never changes after construction and is only released by the destructor, so any thread may read it.
     SOCKET socket_ = INVALID_SOCKET;
-    bool closed_ = false;
+    // Set by the first close(); later calls do nothing.
+    std::atomic<bool> closed_ = false;
 };
 }
 

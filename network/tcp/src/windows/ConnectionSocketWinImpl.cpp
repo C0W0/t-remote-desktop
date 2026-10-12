@@ -159,19 +159,31 @@ std::expected<int, int> ConnectionSocket::Impl::send(std::span<const char> buffe
 }
 
 void ConnectionSocket::Impl::close() {
+    if (closed_.exchange(true)) {
+        return;
+    }
     std::println("Connection socket closed");
-    const int iResult = shutdown(socket_, SD_SEND);
+
+    // Signal only: the socket handle stays open. Releasing it here would let the OS hand the same handle value
+    // to the next socket while another thread still uses this one, so that thread would read from / write to the
+    // wrong connection. The handle is released in the destructor, when nobody can be using it any more.
+    const int iResult = shutdown(socket_, SD_BOTH);
     if (iResult == SOCKET_ERROR) {
         std::println("shutdown failed: {}", WSAGetLastError());
     }
-    closesocket(socket_);
-    socket_ = INVALID_SOCKET;
-    closed_ = true;
+
+    // On POSIX shutdown() is what wakes a thread blocked in recv()/send(). On Windows that is not guaranteed for
+    // a call that is already pending, so also cancel any I/O in flight on this socket, whichever thread issued it.
+    // The cancelled call returns with an error (typically WSAEINTR). A FALSE result with ERROR_NOT_FOUND just
+    // means nothing was pending, which is fine, so the result is ignored.
+    // NOTE: not yet verified on Windows; ConnectionTest.CloseWakesBlockedRecv/CloseWakesBlockedSend cover this.
+    CancelIoEx(reinterpret_cast<HANDLE>(socket_), nullptr);
 }
 
 ConnectionSocket::Impl::~Impl() {
     std::println("Connection socket dropped");
-    if (!closed_) {
-        close();
-    }
+    // No-op if close() already ran; otherwise shuts the connection down first.
+    close();
+    // The only place the socket handle is released.
+    closesocket(socket_);
 }
