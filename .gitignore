@@ -6,3 +6,5 @@ build/**
 build-ide/**
 # Per-user CMake presets
 CMakeUserPresets.json
+# Local dev environments
+msvc-init.ps1
