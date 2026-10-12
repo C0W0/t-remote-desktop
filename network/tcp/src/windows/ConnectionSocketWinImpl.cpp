@@ -176,7 +176,6 @@ void ConnectionSocket::Impl::close() {
     // a call that is already pending, so also cancel any I/O in flight on this socket, whichever thread issued it.
     // The cancelled call returns with an error (typically WSAEINTR). A FALSE result with ERROR_NOT_FOUND just
     // means nothing was pending, which is fine, so the result is ignored.
-    // NOTE: not yet verified on Windows; ConnectionTest.CloseWakesBlockedRecv/CloseWakesBlockedSend cover this.
     CancelIoEx(reinterpret_cast<HANDLE>(socket_), nullptr);
 }
 
