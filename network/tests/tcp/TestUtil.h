@@ -73,6 +73,42 @@ inline std::shared_ptr<ListeningSocket> listenOn(uint16_t port) {
     return std::make_shared<ListeningSocket>(std::move(result).value());
 }
 
+// Both ends of one loopback connection. shared_ptr so tests can hand them to AsyncResult threads.
+struct ConnectedPair {
+    std::shared_ptr<ConnectionSocket> client;
+    std::shared_ptr<ConnectionSocket> server;
+};
+
+// Connects a client to `listener` (already listening on `port`) and accepts it. Returns nullopt on any
+// failure or timeout.
+inline std::optional<ConnectedPair> connectPair(const std::shared_ptr<ListeningSocket>& listener, uint16_t port) {
+    AsyncResult<std::expected<ConnectionSocket, int>> acceptor(
+        [listener] { return ConnectionSocket::Accept(*listener, nullptr); });
+
+    auto client = ConnectionSocket::Connect(kLoopback, port);
+    if (!client.has_value()) {
+        return std::nullopt;
+    }
+    auto accepted = acceptor.waitFor();
+    if (!accepted.has_value() || !accepted->has_value()) {
+        return std::nullopt;
+    }
+    return ConnectedPair{
+        std::make_shared<ConnectionSocket>(std::move(client).value()),
+        std::make_shared<ConnectionSocket>(std::move(*accepted).value()),
+    };
+}
+
+// One loopback connection on a fresh port; the listener is destroyed before returning.
+inline std::optional<ConnectedPair> makeConnectedPair() {
+    const uint16_t port = nextPort();
+    auto listener = listenOn(port);
+    if (listener == nullptr) {
+        return std::nullopt;
+    }
+    return connectPair(listener, port);
+}
+
 inline std::expected<void, int> sendString(const ConnectionSocket& socket, std::string_view data) {
     return socket.send({data.data(), data.size()});
 }

@@ -1,4 +1,5 @@
 add_executable(network_tests
+    tcp/ConnectionTest.cpp
     tcp/TcpTest.cpp
     tcp/ServerTest.cpp
 )

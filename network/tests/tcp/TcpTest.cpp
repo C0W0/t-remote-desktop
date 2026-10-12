@@ -211,6 +211,12 @@ TEST_F(TcpTest, CloseIsIdempotent) {
     EXPECT_EQ(result->error(), kAcceptAborted);
 }
 
+TEST_F(TcpTest, CloseOnMovedFromListenerIsSafe) {
+    ListeningSocket moved = std::move(*listener_);
+    listener_->close(); // moved-from: must be a no-op, not a null dereference
+    moved.close();
+}
+
 TEST_F(TcpTest, ConcurrentCloseFromManyThreadsIsSafe) {
     auto acceptor = acceptAsync();
     std::this_thread::sleep_for(100ms);
