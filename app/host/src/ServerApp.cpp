@@ -8,15 +8,16 @@
 #include "protocol/server/Response.h"
 
 #include <print>
+#include <utility>
 
 #define DEFAULT_BUFLEN 512
 
 namespace ServerApp {
 std::jthread
-run(network::ArcConnectionSocket& connectionSocket, const std::function<void()>& abortCommand) {
+run(network::ArcConnectionSocket& connectionSocket, std::function<void()> abortCommand) {
     using namespace network;
     
-    std::jthread threadHandle([&] {
+    std::jthread threadHandle([&connectionSocket, abortCommand = std::move(abortCommand)] {
         auto connection = connectionSocket.load();
         std::string buffer;
         buffer.reserve(DEFAULT_BUFLEN);

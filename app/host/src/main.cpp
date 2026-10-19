@@ -24,7 +24,7 @@ int main() {
         std::println("accepted new connection from {}:{}", addrInfo.address, addrInfo.port);
         auto connectionSocketPtr = std::make_shared<network::ConnectionSocket>(std::move(connectionSocket));
         std::shared_ptr<network::ConnectionSocket> nullSocketPtr = nullptr;
-        if (arcConnectionSocket.compare_exchange_strong(nullSocketPtr, std::move(connectionSocketPtr))) {
+        if (arcConnectionSocket.compare_exchange_strong(nullSocketPtr, connectionSocketPtr)) {
             thread = ServerApp::run(arcConnectionSocket, [&shouldContinue, &server] {
                 shouldContinue.store(false);
                 server.abortListening();
@@ -40,7 +40,7 @@ int main() {
             std::array<char, network::ServerRespMeta::networkSize()> respMetaSerialized = network::serializeServerRespMeta(respMeta);
             respSerialized.insert(respSerialized.end(), respMetaSerialized.begin(), respMetaSerialized.end());
 
-            auto _ = connectionSocket.send({respSerialized.data(), respSerialized.size()});
+            auto _ = connectionSocketPtr->send({respSerialized.data(), respSerialized.size()});
         }
     });
 

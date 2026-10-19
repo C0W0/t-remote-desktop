@@ -21,7 +21,7 @@ int main() {
     //     0,
     //     0
     // }));
-    auto sendResult = socket.send(network::serializeMessage("exit"));
+    auto sendResult = socket.send(network::serializeMessage("test"));
     if (!sendResult.has_value()) {
         std::println("failed to send");
         return 1;

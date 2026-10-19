@@ -10,7 +10,7 @@
 #include "tcp/Server.h"
 
 namespace ServerApp {
-std::jthread run(network::ArcConnectionSocket& connectionSocket, const std::function<void()>& abortCommand);
+std::jthread run(network::ArcConnectionSocket& connectionSocket, std::function<void()> abortCommand);
 }
 
 
