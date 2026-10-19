@@ -30,17 +30,9 @@ int main() {
                 server.abortListening();
             });
         } else {
-            network::ServerRespMeta respMeta {
-                .status = network::ResponseStatus::ServerBusy,
-                .messageLength = 0,
-            };
-            network::TransportHeader respHeader{network::ClientMessageType::Auth, 0, network::ServerRespMeta::networkSize()};
-
-            std::vector<char> respSerialized = network::serializeHeaderV(respHeader);
-            std::array<char, network::ServerRespMeta::networkSize()> respMetaSerialized = network::serializeServerRespMeta(respMeta);
-            respSerialized.insert(respSerialized.end(), respMetaSerialized.begin(), respMetaSerialized.end());
-
-            auto _ = connectionSocketPtr->send({respSerialized.data(), respSerialized.size()});
+            auto _ = connectionSocketPtr->send(
+                network::serializeServerResponse(network::ResponseStatus::ServerBusy, "")
+            );
         }
     });
 
