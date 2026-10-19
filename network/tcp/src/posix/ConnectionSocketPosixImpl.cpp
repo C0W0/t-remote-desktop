@@ -209,7 +209,12 @@ void ConnectionSocket::Impl::close() {
     // connection. The descriptor is released in the destructor, when nobody can be using it any more.
     const int iResult = shutdown(socketFd_, SHUT_RDWR);
     if (iResult == -1) {
-        std::println("shutdown failed: {}", errno);
+        const int err = errno;
+        if (err == ENOTCONN) {
+            std::println("shutdown failed with ENOTCONN; the other side might have closed the connection");
+        } else {
+            std::println("shutdown failed: {}", err);
+        }
     }
 }
 

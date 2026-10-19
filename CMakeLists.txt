@@ -4,9 +4,10 @@ project(trdp)
 set(CMAKE_CXX_STANDARD 23)
 
 include(CTest) # defines BUILD_TESTING (ON by default) and calls enable_testing()
+include(FetchContent)
+
 if (BUILD_TESTING)
     # GoogleTest is fetched once here; each module declares its own <module>_tests in <module>/tests.
-    include(FetchContent)
     FetchContent_Declare(googletest
         URL https://github.com/google/googletest/archive/refs/tags/v1.17.0.zip
         DOWNLOAD_EXTRACT_TIMESTAMP TRUE
@@ -17,6 +18,12 @@ if (BUILD_TESTING)
     FetchContent_MakeAvailable(googletest)
     include(GoogleTest)
 endif ()
+
+FetchContent_Declare(magic_enum
+    GIT_REPOSITORY https://github.com/Neargye/magic_enum.git
+    GIT_TAG v0.9.8
+)
+FetchContent_MakeAvailable(magic_enum)
 
 add_subdirectory(network)
 add_subdirectory(app)

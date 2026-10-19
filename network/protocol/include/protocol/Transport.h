@@ -15,84 +15,55 @@
 #include <utility>
 #include <vector>
 
-namespace network {
+#include "magic_enum/magic_enum.hpp"
 
-enum class MessageType : std::uint16_t {
+namespace network {
+#define SHARED_MESSAGE_TYPES(X) \
+    X(Message) \
+    X(Disconnect) \
+
+#define ENUM_ITEM(name) name,
+
+enum class ClientMessageType : std::uint16_t {
+    SHARED_MESSAGE_TYPES(ENUM_ITEM)
     Auth,
-    ServerResp,
-    Message,
-    Disconnect
+    Control,
 };
 
-constexpr const char* toString(MessageType type) {
-    switch (type) {
-        case MessageType::Auth:
-            return "Auth";
-        case MessageType::ServerResp:
-            return "ServerResp";
-        case MessageType::Message:
-            return "Message";
-        case MessageType::Disconnect:
-            return "Disconnect";
-    }
-    std::unreachable();
+enum class ServerMessageType : std::uint16_t {
+    SHARED_MESSAGE_TYPES(ENUM_ITEM)
+    Response,
+    ImageFrame,
+};
+
+template<typename T>
+requires (std::is_enum_v<T>)
+constexpr std::string_view toString(T type) {
+    return magic_enum::enum_name(type);
 }
 
 struct TransportHeader {
-    MessageType type;
+    uint16_t type;
     uint16_t flags;
     uint32_t length;
+
+    constexpr TransportHeader(ClientMessageType type, uint16_t flags, uint32_t length) : type(std::to_underlying(type)), flags(flags), length(length) {}
+    constexpr TransportHeader(ServerMessageType type, uint16_t flags, uint32_t length) : type(std::to_underlying(type)), flags(flags), length(length) {}
+
+    [[nodiscard]] constexpr ClientMessageType getMessageTypeClient() const { return static_cast<ClientMessageType>(type); }
+    [[nodiscard]] constexpr ServerMessageType getMessageTypeServer() const { return static_cast<ServerMessageType>(type); }
+
+    consteval static uint32_t networkSize() { return 2*sizeof(uint16_t) + sizeof(uint32_t); }
 };
 
-std::array<char, sizeof(TransportHeader)> serializeHeaderA(const TransportHeader& header);
+std::array<char, TransportHeader::networkSize()> serializeHeaderA(const TransportHeader& header);
 std::vector<char> serializeHeaderV(const TransportHeader& header);
 
-std::expected<TransportHeader, std::string> deserializeHeader(std::span<const char> bytesData);
-
-struct AuthMeta {
-    uint16_t version;
-    uint16_t passwordLength;
-};
-
-enum class ResponseStatus : std::uint16_t {
-    Ok,
-    InvalidPassword,
-    AccessDenied,
-    UnsupportedVersion,
-    ServerBusy,
-    Error
-};
-
-std::expected<AuthMeta, std::string> deserializeAuthMeta(std::span<const char> bytesData);
-
-constexpr const char* toString(ResponseStatus status) {
-    switch (status) {
-        case ResponseStatus::Ok:
-            return "Ok";
-        case ResponseStatus::InvalidPassword:
-            return "InvalidPassword";
-        case ResponseStatus::AccessDenied:
-            return "AccessDenied";
-        case ResponseStatus::UnsupportedVersion:
-            return "UnsupportedVersion";
-        case ResponseStatus::ServerBusy:
-            return "ServerBusy";
-        case ResponseStatus::Error:
-            return "Error";
-    }
-    std::unreachable();
-}
-
-struct ServerRespMeta {
-    ResponseStatus status;
-    uint16_t messageLength;
-};
-
-std::array<char, sizeof(ServerRespMeta)> serializeServerRespMeta(const ServerRespMeta& meta);
-std::expected<ServerRespMeta, std::string> deserializeServerRespMeta(std::span<const char> bytesData);
+std::expected<TransportHeader, std::string> deserializeClientHeader(std::span<const char> bytesData);
+std::expected<TransportHeader, std::string> deserializeServerHeader(std::span<const char> bytesData);
 
 template <typename T>
-requires (std::integral<T> && !std::same_as<T, bool>) || std::is_enum_v<T>
+requires ((std::integral<T> && !std::same_as<T, bool>) || std::is_enum_v<T>)
 constexpr auto hostToNetwork(T value)
 {
     if constexpr (std::is_enum_v<T>) {
@@ -106,16 +77,19 @@ constexpr auto hostToNetwork(T value)
     }
 }
 
-
 template <typename T>
-requires (std::integral<T> && !std::same_as<T, bool>) || std::is_enum_v<T>
+requires ((std::integral<T> && !std::same_as<T, bool>) || std::is_enum_v<T>)
 constexpr auto networkToHost(T value)
 {
     return hostToNetwork(value); // should be identical; aliasing names to avoid confusion.
 }
-
-std::array<char, sizeof(TransportHeader)> serializeDisconnect();
-
 }
+
+template <typename  T>
+requires (std::is_enum_v<T>)
+consteval auto maxTypeValue() {
+    return std::to_underlying(magic_enum::enum_values<T>().back());
+}
+
 
 #endif //TRDP_TRANSPORT_H
