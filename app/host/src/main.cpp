@@ -25,7 +25,7 @@ int main() {
         auto connectionSocketPtr = std::make_shared<network::ConnectionSocket>(std::move(connectionSocket));
         std::shared_ptr<network::ConnectionSocket> nullSocketPtr = nullptr;
         if (arcConnectionSocket.compare_exchange_strong(nullSocketPtr, std::move(connectionSocketPtr))) {
-            ServerApp::run(arcConnectionSocket, [&] {
+            thread = ServerApp::run(arcConnectionSocket, [&shouldContinue, &server] {
                 shouldContinue.store(false);
                 server.abortListening();
             });
