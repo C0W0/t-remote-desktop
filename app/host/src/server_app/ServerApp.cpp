@@ -2,10 +2,11 @@
 // Created by Terry Zha on 10/17/26.
 //
 
-#include "host/ServerApp.h"
+#include "ServerApp.h"
 #include "protocol/Transport.h"
 #include "protocol/client/Control.h"
 #include "protocol/server/Response.h"
+#include "protocol/server/Image.h"
 
 #include <print>
 #include <utility>
@@ -13,11 +14,14 @@
 #define DEFAULT_BUFLEN 512
 
 namespace ServerApp {
-std::jthread
-run(network::ArcConnectionSocket& connectionSocket, std::function<void()> abortCommand) {
+std::jthread run(
+    network::ArcConnectionSocket& connectionSocket,
+    capture::FrameQueue& frameQueue,
+    std::function<void()> abortCommand
+) {
     using namespace network;
     
-    std::jthread threadHandle([&connectionSocket, abortCommand = std::move(abortCommand)] {
+    std::jthread threadHandle([&connectionSocket, &frameQueue, abortCommand = std::move(abortCommand)] {
         auto connection = connectionSocket.load();
         std::string buffer;
         buffer.reserve(DEFAULT_BUFLEN);
@@ -79,6 +83,30 @@ run(network::ArcConnectionSocket& connectionSocket, std::function<void()> abortC
                     std::println("content: {}", buffer);
                     if (buffer.starts_with("exit")) {
                         exit = true;
+                        break;
+                    }
+                    if (buffer.starts_with("image")) {
+                        std::vector<char> imageBuffer = frameQueue.get();
+                        std::vector<char> headerBuffers = serializeHeaderV(TransportHeader {
+                            ServerMessageType::ImageFrame,
+                            0,
+                            static_cast<uint32_t>(FrameHeader::networkSize() + imageBuffer.size()),
+                        });
+                        headerBuffers.resize(TransportHeader::networkSize() + FrameHeader::networkSize());
+                        serializeFrameHeaderInto(
+                            { .magic = 0xFEEDF00D, .version = 0, .type = ImageType::JPG, .flags = 0, .seq = 0, .size = static_cast<uint32_t>(imageBuffer.size()) },
+                            {headerBuffers.data() + TransportHeader::networkSize(), imageBuffer.size()}
+                        );
+                        if (!connection->send(headerBuffers).has_value()) {
+                            std::println("failed to send transport or image header");
+                            exit = true;
+                            break;
+                        }
+                        if (!connection->send(imageBuffer).has_value()) {
+                            std::println("failed to send image");
+                            exit = true;
+                            break;
+                        }
                     }
                     break;
                 }

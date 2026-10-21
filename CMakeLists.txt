@@ -25,8 +25,10 @@ FetchContent_Declare(magic_enum
 )
 FetchContent_MakeAvailable(magic_enum)
 
-add_subdirectory(network)
 add_subdirectory(app)
+add_subdirectory(common)
+add_subdirectory(core)
+add_subdirectory(network)
 
 # Enforces the include-ordering convention: system headers above project headers
 # in .h files, below them in .cpp files. This cannot live in .clang-format --

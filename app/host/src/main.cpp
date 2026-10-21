@@ -1,4 +1,4 @@
-#include "host/ServerApp.h"
+#include "server_app/ServerApp.h"
 #include "protocol/server/Response.h"
 #include "protocol/Transport.h"
 #include "tcp/Server.h"
@@ -18,14 +18,15 @@ int main() {
     network::TcpServer& server = result.value();
 
     std::atomic<bool> shouldContinue{true};
-    std::jthread thread;
+    std::jthread serverThread;
+    capture::FrameQueue frameQueue;
     network::ArcConnectionSocket arcConnectionSocket = nullptr;
-    server.onAccept([&thread, &shouldContinue, &arcConnectionSocket](network::AddrInfo addrInfo, network::ConnectionSocket connectionSocket, network::TcpServer& server) {
+    server.onAccept([&serverThread, &shouldContinue, &arcConnectionSocket, &frameQueue](network::AddrInfo addrInfo, network::ConnectionSocket connectionSocket, network::TcpServer& server) {
         std::println("accepted new connection from {}:{}", addrInfo.address, addrInfo.port);
         auto connectionSocketPtr = std::make_shared<network::ConnectionSocket>(std::move(connectionSocket));
         std::shared_ptr<network::ConnectionSocket> nullSocketPtr = nullptr;
         if (arcConnectionSocket.compare_exchange_strong(nullSocketPtr, connectionSocketPtr)) {
-            thread = ServerApp::run(arcConnectionSocket, [&shouldContinue, &server] {
+            serverThread = ServerApp::run(arcConnectionSocket, frameQueue, [&shouldContinue, &server] {
                 shouldContinue.store(false);
                 server.abortListening();
             });
@@ -35,6 +36,12 @@ int main() {
             );
         }
     });
+
+    std::jthread captureThread = capture::runCapturer(
+        "/Users/terry/workspace/t-remote-desktop/assets/window_xp.jpg",
+        shouldContinue,
+        frameQueue
+    );
 
     while (shouldContinue) {
         auto acceptResult = server.accept();

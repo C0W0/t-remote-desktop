@@ -8,9 +8,14 @@
 #include <thread>
 
 #include "tcp/Server.h"
+#include "capture/Capturer.h"
 
 namespace ServerApp {
-std::jthread run(network::ArcConnectionSocket& connectionSocket, std::function<void()> abortCommand);
+std::jthread run(
+    network::ArcConnectionSocket& connectionSocket,
+    capture::FrameQueue& frameQueue,
+    std::function<void()> abortCommand
+);
 }
 
 
