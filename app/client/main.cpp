@@ -1,10 +1,9 @@
+#include "protocol/server/Image.h"
+#include "protocol/shared/Message.h"
 #include "protocol/Transport.h"
 #include "tcp/Socket.h"
 
 #include <print>
-
-#include "protocol/server/Image.h"
-#include "protocol/shared/Message.h"
 
 #define DEFAULT_PORT 27015
 #define DEFAULT_BUFLEN 512

@@ -1,8 +1,7 @@
 #include "protocol/server/Image.h"
+#include "protocol/Transport.h"
 
 #include <cstring>
-
-#include "protocol/Transport.h"
 
 namespace network {
 bool serializeFrameHeaderInto(FrameHeader header, std::span<char> buffer) {
