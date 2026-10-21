@@ -55,6 +55,10 @@ std::expected<ServerRespMeta, std::string> deserializeServerRespMeta(std::span<c
     memcpy(&statusRaw, dataPtr, sizeof(statusRaw));
     memcpy(&messageLengthRaw, dataPtr + sizeof(statusRaw), sizeof(messageLengthRaw));
 
+    if (networkToHost(statusRaw) > maxTypeValue<ResponseStatus>()) {
+        return std::unexpected("Invalid ResponseStatus");
+    }
+
     return ServerRespMeta {
         .status = static_cast<ResponseStatus>(networkToHost(statusRaw)),
         .messageLength = networkToHost(messageLengthRaw)
