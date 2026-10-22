@@ -7,8 +7,9 @@
 #include <chrono>
 #include <fstream>
 
-std::jthread capture::runCapturer(std::string_view imagePath, const std::atomic<bool>& shouldContinue, FrameQueue& frameQueue) {
-    return std::jthread([imagePath, &shouldContinue, &frameQueue] {
+namespace capture {
+std::jthread runCapturer(std::string_view imagePath, const std::atomic<bool>& shouldContinue, FrameChannel::Tx tx) {
+    return std::jthread([imagePath, &shouldContinue, tx = std::move(tx)] {
         using clock = std::chrono::steady_clock;
         constexpr auto interval = std::chrono::duration_cast<clock::duration>(std::chrono::duration<double>(1.0/30.0));
 
@@ -24,7 +25,7 @@ std::jthread capture::runCapturer(std::string_view imagePath, const std::atomic<
         auto next = clock::now();
         while (shouldContinue) {
             next += interval;
-            frameQueue.push(imageBytes);
+            tx->send(imageBytes);
             auto now = std::chrono::steady_clock::now();
             if (now < next) {
                 std::this_thread::sleep_until(next);
@@ -33,4 +34,5 @@ std::jthread capture::runCapturer(std::string_view imagePath, const std::atomic<
             }
         }
     });
+}
 }

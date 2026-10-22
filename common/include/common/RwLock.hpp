@@ -3,7 +3,7 @@
 #define TRDP_RWLOCK_HPP
 #include <shared_mutex>
 
-namespace concurrency {
+namespace sync {
 template <typename T>
 class ReadLockProxy {
 public:
@@ -27,7 +27,8 @@ private:
 template <typename T>
 class RwLock {
 public:
-    explicit RwLock(T&& data): data_(std::forward<T>(data)) {};
+    explicit RwLock(const T& data): data_(data) {};
+    explicit RwLock(T&& data): data_(std::move(data)) {};
 
     ReadLockProxy<T> lock() const {
         return ReadLockProxy<T>{data_, mutex_};
@@ -44,9 +45,6 @@ private:
     T data_;
     mutable std::shared_mutex mutex_;
 };
-
-template <typename T>
-using ConcurrentQueue = RwLock<std::queue<T>>;
 }
 
 #endif

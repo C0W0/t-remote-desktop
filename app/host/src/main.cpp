@@ -19,14 +19,14 @@ int main() {
 
     std::atomic<bool> shouldContinue{true};
     std::jthread serverThread;
-    capture::FrameQueue frameQueue;
+    auto [tx, rx] = capture::FrameChannel::createChannel();
     network::ArcConnectionSocket arcConnectionSocket = nullptr;
-    server.onAccept([&serverThread, &shouldContinue, &arcConnectionSocket, &frameQueue](network::AddrInfo addrInfo, network::ConnectionSocket connectionSocket, network::TcpServer& server) {
+    server.onAccept([&serverThread, &shouldContinue, &arcConnectionSocket, rx = std::move(rx)](network::AddrInfo addrInfo, network::ConnectionSocket connectionSocket, network::TcpServer& server) mutable {
         std::println("accepted new connection from {}:{}", addrInfo.address, addrInfo.port);
         auto connectionSocketPtr = std::make_shared<network::ConnectionSocket>(std::move(connectionSocket));
         std::shared_ptr<network::ConnectionSocket> nullSocketPtr = nullptr;
         if (arcConnectionSocket.compare_exchange_strong(nullSocketPtr, connectionSocketPtr)) {
-            serverThread = ServerApp::run(arcConnectionSocket, frameQueue, [&shouldContinue, &server] {
+            serverThread = ServerApp::run(arcConnectionSocket, std::move(rx), [&shouldContinue, &server] {
                 shouldContinue.store(false);
                 server.abortListening();
             });
@@ -40,7 +40,7 @@ int main() {
     std::jthread captureThread = capture::runCapturer(
         "/Users/terry/workspace/t-remote-desktop/assets/window_xp.jpg",
         shouldContinue,
-        frameQueue
+        std::move(tx)
     );
 
     while (shouldContinue) {

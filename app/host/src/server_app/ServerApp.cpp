@@ -16,12 +16,12 @@
 namespace ServerApp {
 std::jthread run(
     network::ArcConnectionSocket& connectionSocket,
-    capture::FrameQueue& frameQueue,
+    capture::FrameChannel::Rx rx,
     std::function<void()> abortCommand
 ) {
     using namespace network;
     
-    std::jthread threadHandle([&connectionSocket, &frameQueue, abortCommand = std::move(abortCommand)] {
+    std::jthread threadHandle([&connectionSocket, rx = std::move(rx), abortCommand = std::move(abortCommand)] mutable {
         auto connection = connectionSocket.load();
         std::string buffer;
         buffer.reserve(DEFAULT_BUFLEN);
@@ -86,7 +86,11 @@ std::jthread run(
                         break;
                     }
                     if (buffer.starts_with("image")) {
-                        std::vector<char> imageBuffer = frameQueue.get();
+                        auto imgReceived = rx.get();
+                        if (!imgReceived.has_value()) {
+                            std::println("failed to receive image: {}", network::toString(imgReceived.error()));
+                        }
+                        std::vector<char> imageBuffer = std::move(imgReceived).value();
                         std::vector<char> headerBuffers = serializeHeaderV(TransportHeader {
                             ServerMessageType::ImageFrame,
                             0,

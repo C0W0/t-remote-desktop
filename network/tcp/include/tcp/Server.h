@@ -13,7 +13,7 @@
 namespace network {
 class TcpServer {
 public:
-    using ConnectionHandler = std::function<void(AddrInfo, ConnectionSocket, TcpServer&)>;
+    using ConnectionHandler = std::move_only_function<void(AddrInfo, ConnectionSocket, TcpServer&)>;
 
     static std::expected<TcpServer, int> CreateServer(uint16_t port);
 
