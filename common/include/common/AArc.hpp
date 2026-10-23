@@ -6,7 +6,7 @@
 #include <memory>
 #include <utility>
 
-namespace sync {
+namespace syncc {
 // Atomic access to a shared pointer, not to the object it points to.
 // Uses the shared_ptr atomic free functions available through C++23.
 template <typename T>

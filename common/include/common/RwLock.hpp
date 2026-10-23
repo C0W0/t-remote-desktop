@@ -3,7 +3,7 @@
 #define TRDP_RWLOCK_HPP
 #include <shared_mutex>
 
-namespace sync {
+namespace syncc {
 template <typename T>
 class ReadLockProxy {
 public:

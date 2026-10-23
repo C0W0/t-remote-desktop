@@ -15,7 +15,7 @@
 #include <expected>
 #include <queue>
 
-namespace sync {
+namespace syncc {
 template<typename T>
 class ConcurrentQueue {
 public:

@@ -17,7 +17,7 @@ namespace network {
 class ConnectionSocket;
 class ListeningSocket;
 
-using ArcConnectionSocket = sync::AArc<ConnectionSocket>;
+using ArcConnectionSocket = syncc::AArc<ConnectionSocket>;
 
 // Error returned by ConnectionSocket::Accept when the ListeningSocket was closed (ListeningSocket::close()).
 // Equal to WSAEINTR, which is what Winsock reports for an accept() interrupted by closesocket().

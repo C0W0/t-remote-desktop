@@ -12,7 +12,7 @@
 
 namespace capture {
 
-using FrameChannel = sync::Channel<std::vector<char>>;
+using FrameChannel = syncc::Channel<std::vector<char>>;
 
 std::jthread runCapturer(std::string_view imagePath, const std::atomic<bool>& shouldContinue, FrameChannel::Tx tx);
 
