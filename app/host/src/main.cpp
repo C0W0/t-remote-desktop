@@ -21,12 +21,12 @@ int main() {
     std::jthread serverThread;
     auto [tx, rx] = capture::FrameChannel::createChannel();
     network::ArcConnectionSocket arcConnectionSocket = nullptr;
-    server.onAccept([&serverThread, &shouldContinue, &arcConnectionSocket, rx = std::move(rx)](network::AddrInfo addrInfo, network::ConnectionSocket connectionSocket, network::TcpServer& server) mutable {
+    server.onAccept([&serverThread, &shouldContinue, &arcConnectionSocket, &rx](network::AddrInfo addrInfo, network::ConnectionSocket connectionSocket, network::TcpServer& server) mutable {
         std::println("accepted new connection from {}:{}", addrInfo.address, addrInfo.port);
         auto connectionSocketPtr = std::make_shared<network::ConnectionSocket>(std::move(connectionSocket));
         std::shared_ptr<network::ConnectionSocket> nullSocketPtr = nullptr;
         if (arcConnectionSocket.compare_exchange_strong(nullSocketPtr, connectionSocketPtr)) {
-            serverThread = ServerApp::run(arcConnectionSocket, std::move(rx), [&shouldContinue, &server] {
+            serverThread = ServerApp::run(arcConnectionSocket, rx, [&shouldContinue, &server] {
                 shouldContinue.store(false);
                 server.abortListening();
             });

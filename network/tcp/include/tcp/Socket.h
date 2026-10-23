@@ -5,18 +5,19 @@
 #ifndef TRDP_SOCKET_H
 #define TRDP_SOCKET_H
 
-#include <atomic>
-#include <memory>
 #include <cstdint>
 #include <expected>
+#include <memory>
 #include <span>
 #include <string>
+
+#include "common/AArc.hpp"
 
 namespace network {
 class ConnectionSocket;
 class ListeningSocket;
 
-using ArcConnectionSocket = std::atomic<std::shared_ptr<ConnectionSocket>>;
+using ArcConnectionSocket = sync::AArc<ConnectionSocket>;
 
 // Error returned by ConnectionSocket::Accept when the ListeningSocket was closed (ListeningSocket::close()).
 // Equal to WSAEINTR, which is what Winsock reports for an accept() interrupted by closesocket().

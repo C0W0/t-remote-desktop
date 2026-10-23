@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 4.1)
-project(trdp)
+project(trdp LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(CTest) # defines BUILD_TESTING (ON by default) and calls enable_testing()
 include(FetchContent)

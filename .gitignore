@@ -3,6 +3,7 @@
 # Build folder
 out
 build/**
+build-clang/**
 build-ide/**
 # Per-user CMake presets
 CMakeUserPresets.json

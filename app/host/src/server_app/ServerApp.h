@@ -13,7 +13,7 @@
 namespace ServerApp {
 std::jthread run(
     network::ArcConnectionSocket& connectionSocket,
-    capture::FrameChannel::Rx rx,
+    capture::FrameChannel::Rx& rx,
     std::function<void()> abortCommand
 );
 }
