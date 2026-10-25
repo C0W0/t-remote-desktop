@@ -1,8 +1,22 @@
 add_library(render)
 
+set(SOURCE_LIST
+    src/Frame.cpp
+)
+
+if (APPLE)
+    list(APPEND SOURCE_LIST src/metal/MetalFrame.cpp src/metal/MetalRenderer.mm)
+    target_link_libraries(render
+        PRIVATE
+            "-framework Foundation"
+            "-framework Metal"
+            "-framework QuartzCore"
+    )
+endif ()
+
 target_sources(render
     PRIVATE
-        src/Frame.cpp
+        ${SOURCE_LIST}
 )
 
 target_include_directories(render

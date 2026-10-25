@@ -5,22 +5,11 @@
 #ifndef TRDP_FRAME_H
 #define TRDP_FRAME_H
 
-#include <print>
-#include <expected>
-#include <string>
 #include <SDL3/SDL.h>
 
 namespace frame {
 class SdlWindowWrapper {
 public:
-    static std::expected<SdlWindowWrapper, std::string> Create(const char* title, int w, int h, SDL_WindowFlags flags)  {
-        SDL_Window* window = SDL_CreateWindow(title, w, h, flags);
-        if (!window) {
-            return std::unexpected{std::format("SDL_CreateWindow failed: {}", SDL_GetError())};
-        }
-        return SdlWindowWrapper(window);
-    }
-
     SdlWindowWrapper(const SdlWindowWrapper&) = delete;
     SdlWindowWrapper& operator=(const SdlWindowWrapper&) = delete;
     SdlWindowWrapper(SdlWindowWrapper&& other) noexcept {
@@ -36,7 +25,7 @@ public:
         return *this;
     }
 
-    ~SdlWindowWrapper() {
+    virtual ~SdlWindowWrapper() {
         if (ptr_) {
             SDL_DestroyWindow(ptr_);
             ptr_ = nullptr;
@@ -44,7 +33,9 @@ public:
     }
 
     SDL_Window* operator->() { return ptr_; }
-private:
+
+    virtual void renderFrame() = 0;
+protected:
     explicit SdlWindowWrapper(SDL_Window* window): ptr_{window} {}
 
     SDL_Window* ptr_;

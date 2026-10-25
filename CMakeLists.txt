@@ -1,9 +1,14 @@
 cmake_minimum_required(VERSION 4.1)
 project(trdp LANGUAGES C CXX)
 
+if (APPLE)
+    enable_language(OBJCXX)
+endif ()
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(CTest) # defines BUILD_TESTING (ON by default) and calls enable_testing()
 include(FetchContent)
