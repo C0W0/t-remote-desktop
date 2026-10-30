@@ -2,6 +2,7 @@
 #include "protocol/shared/Message.h"
 #include "protocol/Transport.h"
 #include "tcp/Socket.h"
+#include "common/EnumUtils.hpp"
 
 #include <print>
 
@@ -63,7 +64,7 @@ int main() {
         network::FrameHeader frameHeader = std::move(frameHeaderDeserialized).value();
         std::println(
             "Received FrameHeader:\n\tVersion: {}\n\tImage Type: {}\n\tSeq: {}\n\tImageSize: {}",
-            frameHeader.version, network::toString(frameHeader.type), frameHeader.seq, frameHeader.size
+            frameHeader.version, enum_utils::toString(frameHeader.type), frameHeader.seq, frameHeader.size
         );
         std::println("{} bytes of binary data received after the image header", buffer.length()- network::FrameHeader::networkSize());
     }

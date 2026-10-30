@@ -7,6 +7,7 @@
 #include "protocol/client/Control.h"
 #include "protocol/server/Response.h"
 #include "protocol/server/Image.h"
+#include "common/EnumUtils.hpp"
 
 #include <print>
 #include <utility>
@@ -88,7 +89,7 @@ std::jthread run(
                     if (buffer.starts_with("image")) {
                         auto imgReceived = rx.get();
                         if (!imgReceived.has_value()) {
-                            std::println("failed to receive image: {}", network::toString(imgReceived.error()));
+                            std::println("failed to receive image: {}", enum_utils::toString(imgReceived.error()));
                         }
                         std::vector<char> imageBuffer = std::move(imgReceived).value();
                         std::vector<char> headerBuffers = serializeHeaderV(TransportHeader {
@@ -126,7 +127,7 @@ std::jthread run(
                         break;
                     }
                     ControlMeta meta = std::move(deserializedMeta).value();
-                    std::println("the server received a control packet: ", toString(meta.type));
+                    std::println("the server received a control packet: ", enum_utils::toString(meta.type));
                     break;
                 }
             }

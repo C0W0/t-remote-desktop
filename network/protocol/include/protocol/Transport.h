@@ -36,12 +36,6 @@ enum class ServerMessageType : std::uint16_t {
     ImageFrame,
 };
 
-template<typename T>
-requires (std::is_enum_v<T>)
-constexpr std::string_view toString(T type) {
-    return magic_enum::enum_name(type);
-}
-
 struct TransportHeader {
     uint16_t type;
     uint16_t flags;
